@@ -1,0 +1,195 @@
+.primary-number{
+    text-align: center;
+    cursor: pointer;
+}
+
+#call-list-table > tbody > tr, #called-list-table > tbody > tr{
+    cursor: pointer;
+}
+.lead-detail dt, .lead-detail dt{
+    margin-top: 3px;
+}
+.close, .close:hover{
+    opacity: 1 !important;
+}
+#callBox .dl-horizontal dt{
+    text-align:left;
+}
+
+#callBox .dl-full dt{
+   margin-top: 10px;
+   margin-bottom: 5px;
+}
+.mar20r{
+    margin-right: 20px;
+}
+/* .lead-stage td span{
+    cursor: pointer;
+} */
+.error{
+    display: block;
+    margin-top: 5px;
+    margin-bottom: 10px;
+    color: #dd4b39;
+}
+.timeline .box-body, .timeline div.timeline-item{
+    background-color: #E4F1FE !important;
+}
+#datePicker1{
+    position: absolute;
+    right: 270px;
+    width: 200px;
+    height: 30px;
+    z-index:9;
+}
+#datePicker12{
+    position: absolute;
+    right: 475px;
+    width: 200px;
+    height: 30px;
+    z-index:9;
+}
+#dashboardDatePicker{
+    position: absolute;
+    right: 15px;
+    width: 200px;
+    height: 30px;
+    z-index:9;
+}
+.overlay .check-in{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-left: -15px;
+    margin-top: -15px;
+}
+.dashboard .info-box-number{
+    font-size:40px;
+    text-align: right;
+}
+#leadStatusFilter{
+    position: absolute;
+    width: 140px;
+    right: 480px;
+    height: 30px;
+    z-index: 9;
+}
+#executiveFilter{
+    position: absolute;
+    width: 200px;
+    right: 600px;
+    height: 30px;
+    z-index: 9;
+}
+#cityFilter{
+    position: absolute;
+    width: 200px;
+    right: 480px;
+    height: 30px;
+    z-index: 9;
+}
+#sourceFilter, .sourceFilter{
+    position: absolute;
+    width: 200px;
+    right: 480px;
+    height: 30px;
+    z-index: 9;
+}
+#frequencyFilter, .frequencyFilter{
+    position: absolute;
+    width: 200px;
+    right: 480px;
+    height: 30px;
+    z-index: 9;
+}
+.lead-call-list #typeFilter, .lead-call-list .typeFilter{
+    position: absolute;
+    width: 200px;
+    right: 490px;
+    height: 30px;
+    z-index: 9;
+}
+.lead-call-list #cityFilter{
+    right: 270px;
+}
+.lead-call-list #leadPhaseFilter, .lead-call-list .leadPhaseFilter{
+    right: 920px;
+}
+.lead-call-list #assignedTo, .lead-call-list .assignedTo{
+    right: 1140px;
+}
+.lead-call-list #sourceFilter, .lead-call-list .sourceFilter{
+    right: 700px;
+}
+#leadStageFilter{
+    position: absolute;
+    width: 200px;
+    right: 259px;
+    height: 30px;
+    z-index: 9;
+}
+#subscriptionTypeFilter{
+    position: absolute;
+    width: 200px;
+    right: 480px;
+    height: 30px;
+    z-index: 9;
+}
+#leadFilter{
+    position: absolute;
+    width: 200px;
+    right: 700px;
+    height: 30px;
+    z-index: 9;
+}
+#leadPhaseFilter, .leadPhaseFilter{
+    position: absolute;
+    width: 200px;
+    right: 920px;
+    height: 30px;
+    z-index: 9;
+}
+#assignedTo{
+    position: absolute;
+    width: 200px;
+    right: 1140px;
+    height: 30px;
+    z-index: 9;
+}
+#leadSourceFilter{
+    position: absolute;
+    width: 200px;
+    right: 259px;
+    height: 30px;
+    z-index: 9;
+}
+#schoolFilter{
+    position: absolute;
+    width: 200px;
+    right: 685px;
+    height: 30px;
+    z-index: 9;
+}
+.select2{
+    position: absolute !important;
+    right: 688px;
+    z-index: 9;
+}
+.crm-search{
+    width: 15%;
+    position: absolute;
+    top: 15px;
+    left: 84%;
+}
+.easy-autocomplete{
+    display:inline-block;
+}
+.assign.float-right{
+    float: right;
+    margin-right: 10px;
+}
+#cloudCallStatus{
+    margin: 10px 0;
+    font-size: 30px;
+    text-align: center;
+}
