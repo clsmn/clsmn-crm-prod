@@ -81,9 +81,10 @@
                     <label for="">Added At:</label> {{ $historyItem->note->created_at->format(config('access.date_time_format')) }}<br>
                 </div>
                 <div class="col-md-12">
+                    <br> <label for="">Source:</label> {{ $historyItem->note->data_medium }}<br>
                     <label for="">Note</label><br>
                     <h4>{{ $historyItem->note->note }}</h4>
-                    <br> <label for="">Source:</label> <br>
+                    
                 </div>
             </div>
         @elseif($historyItem->type_id == '4' && $historyItem->sub_type == 'call_record')

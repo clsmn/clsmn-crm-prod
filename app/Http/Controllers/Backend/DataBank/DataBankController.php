@@ -191,6 +191,20 @@ class DataBankController extends Controller
         $sources = $dataBankRepo->getMediumFilter();
         $sources = $sources->toArray();
         $options = json_encode(['data' =>  $sources]);
+        $upload_data = DB::table('upload_datas')->select('*')->where('date', date('Y-m-d'))->where('data_medium', $camp)->get();
+        if(count($upload_data) == 0)
+        {
+            DB::table('upload_datas')->insert(
+                     array(
+                            'date'     =>   date('Y-m-d'), 
+                            'data_medium'     =>   $camp, 
+                            'repeatlLeads'   =>   0,
+                            'newLeads'   =>   0,
+                            'created_at'   =>   date('Y-m-d h:m:s'),
+                            'updated_at'   =>   date('Y-m-d h:m:s'),
+                            )
+                          );
+        }
         
         return view('backend.data_bank.bulk', compact('data', 'camp', 'changeSource','options'));
     }
@@ -229,8 +243,24 @@ class DataBankController extends Controller
             $dataUser->updated_at = date('Y-m-d H:i:s');
             $dataUser->save();
 
-            return response()->json(['status' => '200', 'data' => 'Lead added.']);
-        }else{
+            DB::table('upload_data_records')->insert(
+                     array(
+                            'date'     =>   date('Y-m-d'), 
+                            'data_medium'     =>   $medium, 
+                            'name'   =>   $name,
+                            'country_code'   =>   $countryCode,
+                            'phone'   =>   $phone,
+                            'type'  => 'existing',
+                            'created_at'   =>   date('Y-m-d h:m:s'),
+                            'updated_at'   =>   date('Y-m-d h:m:s'),
+                            )
+                          );
+            return response()->json(['status' => '200', 'data' => 'Lead added.','leadtype'=>"existing", 'dataUser'=> $dataUser]);
+
+            // return response()->json(['status' => '200', 'data' => 'Lead added.']);
+        }
+        else
+        {
             // insert into data bank
             $dataUser                   = new DataUser;
             $dataUser->name             = $name;
@@ -242,6 +272,18 @@ class DataBankController extends Controller
             $dataUser->data_medium      = $medium;
             $dataUser->moved_to_lead    = '0';
 
+            DB::table('upload_data_records')->insert(
+                     array(
+                            'date'     =>   date('Y-m-d'), 
+                            'data_medium'     =>   $medium, 
+                            'name'   =>   $name,
+                            'country_code'   =>   $countryCode,
+                            'phone'   =>   $phone,
+                            'type'  => 'new',
+                            'created_at'   =>   date('Y-m-d h:m:s'),
+                            'updated_at'   =>   date('Y-m-d h:m:s'),
+                            )
+                          );
             return DB::transaction(function() use($dataUser, $request, $dataBankRepo){
                 if($dataUser->save())
                 {
@@ -276,11 +318,43 @@ class DataBankController extends Controller
                             $dataBankRepo->assignLeadToExecutive($request);
                         }
                     }
-                    return response()->json(['status' => '200', 'data' => 'Lead added.']);
+                    return response()->json(['status' => '200', 'data' => 'Lead added.','leadtype'=>"new", 'dataUser'=> $dataUser]);
+                    // return response()->json(['status' => '200', 'data' => 'Lead added.']);
                 }
                 return response()->json(['status' => '422', 'data' => 'Some error occurred try again later.']);
             });
         }
+    }
+
+    function upload_data(Request $request)
+    {
+        $upload_data = DB::table('upload_datas')->select('*')->where('date', date('Y-m-d'))->where('data_medium', $request->medium)->get();
+        $totalRepeat = DB::table('upload_data_records')->select('*')->where('date', date('Y-m-d'))->where('data_medium', $request->medium)->where('type', 'existing')->count();
+        $totalnew = DB::table('upload_data_records')->select('*')->where('date', date('Y-m-d'))->where('data_medium', $request->medium)->where('type', 'new')->count();
+
+        DB::table('upload_datas')->insert(
+             array(
+                    'date'  => date('Y-m-d'),
+                    'data_medium'  => $request->medium,
+                    'repeatlLeads'   =>   $totalRepeat,
+                    'newLeads'   =>    $totalnew,
+                    'created_at'   =>   date('Y-m-d h:m:s'),
+                    'updated_at'   =>   date('Y-m-d h:m:s'),
+             )
+        );
+        // DB::table('upload_datas')
+        //             ->where('date', date('Y-m-d'))  
+        //             ->where('data_medium', $request->medium)  
+        //             ->update(
+        //                 array(
+        //                         'repeatlLeads'   =>   $upload_data[0]->repeatlLeads + $totalRepeat,
+        //                         'newLeads'   =>   $upload_data[0]->newLeads + $totalnew,
+        //                         'created_at'   =>   date('Y-m-d h:m:s'),
+        //                         'updated_at'   =>   date('Y-m-d h:m:s'),
+        //                       )
+        //             );
+        DB::table('upload_data_records')->truncate();
+        return response()->json(['status' => '200', 'data' => 'Success.']);
     }
 
     function updateFromLead(Request $request)

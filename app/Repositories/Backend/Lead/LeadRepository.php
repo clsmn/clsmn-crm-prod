@@ -1001,6 +1001,7 @@ class LeadRepository extends BaseRepository
         $leadNote->lead_id = $lead->id;
         $leadNote->user_id = $user->id;
         $leadNote->note = $request['note'];
+        $leadNote->data_medium = $request['source'];
         $leadNote->save();
 
         //update lead

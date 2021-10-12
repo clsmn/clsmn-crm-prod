@@ -400,7 +400,7 @@
                         <button class="btn btn-info btn-block sendWhatsAppMsg">Send WhatsApp Message</button>
                     </div>
                     <div class="col-md-2">
-                        <button class="btn btn-info btn-block addNote">Add Note</button>
+                        <button class="btn btn-info btn-block addNote" data-val="{{ $lead->id }}">Add Note</button>
                     </div>
                     @if($lead->assigned_to == $user->id)
                         <div class="col-md-2">
@@ -590,6 +590,7 @@
                     </select>
                 </dd>
             </dl>
+            <input type="hidden" id="leadSourceNote">
             <div class="col-md-4 col-md-offset-4 text-center">
                 <button class="btn btn-success saveLeadNote" data-val="{{ $lead->id }}">Save</button>
                 <button class="btn btn-danger cancelLeadNote">Cancel</button>

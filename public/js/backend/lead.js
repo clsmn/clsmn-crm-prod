@@ -842,6 +842,19 @@ $(function() {
     //Add Note
     $('body').on('click', '.addNote', function(){
         $('#addNoteBox').removeClass('hide');
+        $('#addNoteBox').removeClass('hide');
+        var leadId = $(this).attr('data-val');
+        $('#leadActionMessage').html('');
+        //$(this).remove();
+        //create call history
+        $.ajax({
+            url     : baseURL+'/admin/ajax/callLead/'+leadId,
+            type    : 'post',
+            success : function(response)
+            {
+                $('#leadSourceNote').val(response.Data.data_medium);
+            }
+        });
     });
     
     $('body').on('click', '.cancelLeadNote', function(){
@@ -858,6 +871,7 @@ $(function() {
     $('body').on('click', '.saveLeadNote', function(){
         var leadId = $(this).attr('data-val');
         var addNote = $('#addNote').val();
+        var leadSourceNote = $('#leadSourceNote').val();
         var err = false;
         $('#addNote').next('div.error').html('');
 
@@ -871,12 +885,13 @@ $(function() {
             $.ajax({
                 url     : baseURL+'/admin/ajax/addLeadNote/'+leadId,
                 type    : 'post',
-                data    : 'note='+addNote,
+                data    : 'note='+addNote+'&source='+leadSourceNote,
                 success : function(response)
                 {
                     if(response.Status == '200')
                     {
                         $('#addNote').val('');
+                        $('#leadSourceNote').val('');
                         $('#quickAddNote').val('');
                         $('#addNoteBox').addClass('hide');
                         var html = '<div class="alert alert-success alert-dismissible">';

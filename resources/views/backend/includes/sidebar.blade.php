@@ -30,6 +30,12 @@
                     <span>Lead Performance</span>
                 </a>
             </li>
+            <li class="{{ active_class(Active::checkUriPattern('lead/upload')) }}">
+                <a href="{{ route('admin.lead.upload') }}">
+                    <i class="fa fa-upload"></i>
+                    <span>Uploaded Data</span>
+                </a>
+            </li>
             <li class="{{ active_class(Active::checkUriPattern('admin/access/*')) }} treeview">
                 <a href="#">
                     <i class="fa fa-users"></i>

@@ -134,7 +134,19 @@ class WebhookController extends Controller
                 $dataUser->status = '';
                 $dataUser->data_medium = ($medium)? strtolower($medium) : 'manual';
                 $dataUser->moved_to_lead = '0';
-        
+                $upload_data = DB::table('upload_datas')->select('*')->where('date', date('Y-m-d'))->where('data_medium', $medium)->get();
+                
+                
+                // DB::table('upload_datas')
+                //             ->where('date', date('Y-m-d'))  
+                //             ->where('data_medium', $medium)  
+                //             ->update(
+                //                 array(
+                //                         'repeatlLeads'   =>   $upload_data[0]->repeatlLeads + 1,
+                //                         'created_at'   =>   date('Y-m-d h:m:s'),
+                //                         'updated_at'   =>   date('Y-m-d h:m:s'),
+                //                       )
+                //             );
                 return DB::transaction(function() use($dataUser, $request){
                     if($dataUser->save())
                     {
@@ -162,11 +174,22 @@ class WebhookController extends Controller
                     }
                     return response()->json(['status' => '422', 'data' => 'Some error occurred try again later.']);
                 });
-            }else{
+            }
+            else
+            {
                 $dataUser->phase = ($from == 'cpm_campaign')? '' : $dataUser->phase;
                 $dataUser->data_medium = ($medium)? strtolower($medium) : $dataUser->data_medium;
                 $dataUser->update();
-
+                $upload_data = DB::table('upload_datas')->select('*')->where('date', date('Y-m-d'))->where('data_medium', $medium)->get();
+                
+                // DB::table('upload_datas')
+                //             ->where('date', date('Y-m-d'))  
+                //             ->where('data_medium', $medium)  
+                //             ->update(
+                //                 array(
+                //                         'newLeads'   =>   $upload_data[0]->newLeads + 1,
+                //                       )
+                //     );
                 return response()->json(['status' => '200', 'data' => 'Lead updated.']);
             }
         // }
@@ -200,6 +223,7 @@ class WebhookController extends Controller
                 $dataUser->phase = 'trial';
             }else{
                 $dataUser->phase = 'kit_purchased';
+                $dataUser->lead_status = 'sale';
             }
             if($dataUser->subscription_type == NULL)
             {
@@ -208,7 +232,7 @@ class WebhookController extends Controller
             {
                 $dataUser->subscription_type = 'PAID';
             }
-            $dataUser->lead_status = NULL;
+            // $dataUser->lead_status = NULL;
             $dataUser->update();
 
             $lead = Lead::where('data_user_id', $dataUser->id)->first();

@@ -1,6 +1,6 @@
 @extends ('backend.layouts.app')
 
-@section ('title', 'Lead Performance')
+@section ('title', 'Upload Data')
 
 @section('after-styles')
     {{ Html::style("css/backend/plugin/datatables/dataTables.bootstrap.min.css") }}
@@ -14,8 +14,7 @@
 @endsection
 
 @section('page-header')
-    <h1>Lead Performance
-</h1>
+    <h1>Upload Data</h1>
 @endsection
 <style type="text/css">
     .spinner {
@@ -38,10 +37,10 @@
   max-width: 50px;
   /* More than it will ever come, notice that this affects on animation duration */
 }
-table.header tr td { font-size: 13px; }
-.t-height {
+
+tbody {
     display:block;
-    height:80vh !important;
+    height:80vh;
     overflow:auto;
 }
 thead, tbody tr {
@@ -78,36 +77,16 @@ thead {
     /* right: 170px; */
     margin-right: 20px;
 }
-
-.filter-div
-{
-        right: 540px;
-    position: absolute;
-    top: 0;
-}
-.multiselect-container
-{
-    padding: 0px 10px !important;
-}
 </style>
+
 @section('content')
     <div class="box box-success">
          <div class="box-header with-border mb-10">
-            <h3 class="box-title">Lead Performance</h3>
+            <h3 class="box-title">Upload Data</h3>
             <span class="text-danger" id="resultPerformance"></span>
              <span class="has-spinner" id="calendar-filter">
                 <span class="spinner"><i class="fa fa-refresh fa-spin"></i></span></span>
-                <span class="has-spinner text-danger" style="display:none" id="filter-message" ></span>
-                <div class="filter-div">
-                    <label>Filter Source</label>
-                   
-                    <select name="langOpt[]" class="pull-right" multiple id="langOpt">
-                        @foreach($dataMediums as $source)
-                            <option value="{{ $source }}">{{ $source }}</option>
-                        @endforeach
-                    </select>
-                <button class="btn btn-success" onclick="filterSource();" id="source-filter"> Filter </button>
-                </div>
+                <span class="has-spinner text-danger" id="filter-message" >{{date('d M, Y')}}</span>
             <div class="box-tools pull-right">
                
                 <div id="datePickerLead" style="background: #fff; cursor: pointer; padding: 5px 5px; border: 1px solid #ccc; width: 310px;position: absolute;right: 170px;margin-right: 20px;">
@@ -115,43 +94,60 @@ thead {
 
                     <span>Select Date Range</span> <i class="fa fa-caret-down"></i>
                 </div>
+                <input type="hidden" name="endDate" value="">
+                <input type="hidden" name="startDate" value="">
                 <div class="pull-right mb-10">
-                    <button class="btn btn-success btn-xs has-spinner" id="refresh-performance" onclick="refershPerformance();" ><span class="spinner"><i class="fa fa-refresh fa-spin"></i></span> Refresh</button>
-                    <button id="btnExport" class="btn btn-success btn-xs" onclick="fnExcelReport();" {{ $html == '' ? 'disabled' : ''}}> Excel Export</button>
+                    <button id="btnExport" class="btn btn-success btn-xs" onclick="fnExcelReport();" > Excel Export</button>
                 </div>
                 <div class="clearfix"></div>
             </div><!--box-tools pull-right-->
+            
         </div><!-- /.box-header -->
+
         <div class="box-body">
             <div class="table-responsive">
-                
-                <table id="workforce-table" class="table table-condensed table-hover mt-5 header">
-                    @if($html == '')
-                    <thead>
+                <table id="upload-data-table" class="table table-condensed  table-hover mt-5 header data-sticky-header">
+                @if($html == '')
+                    <thead style="position: sticky;top: 0">
                         <tr>
-                            <th>Lead Source</th>
+                            <th>Source</th>
                             <th>Total Leads</th>
-                            <th>Open</th>
-                            <th>Hot</th>
-                            <th>Mild</th>
-                            <th>Cold</th>
-                            <th>Dead</th>
-                            <th>Sale</th>
-                            <th>No Answer</th>
-                            <th>Busy</th>
-                            <th>Not Intrested</th>
+                            <th>Repeat Leads</th>
+                            <th>New Leads</th>
                         </tr>
                     </thead>
-                    <tbody id="lead-performance" class="t-height">
-                        
+                    <tbody id="lead-performance">
+                           
                     </tbody>
-                    @else
-                    {!! $html !!}
-                    @endif
+                   
+                @else
+                {!! $html !!}
+                @endif
                 </table>
+                 
             </div><!--table-responsive-->
         </div><!-- /.box-body -->
     </div><!--box-->
+
+    <div id="myModal" class="modal fade" role="dialog">
+      <div class="modal-dialog modal-lg" style="width: 80%;">
+
+        <!-- Modal content-->
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal">&times;</button>
+            <h4 class="modal-title" id="modal-head"></h4>
+            <span id="modal-sub-head"></span>
+          </div>
+          <div class="modal-body" id="modal-table">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
 @endsection
 
 @section('after-scripts')
@@ -171,6 +167,8 @@ thead {
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
     <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.0.1/js/buttons.html5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.13/js/bootstrap-multiselect.js"></script>
+      <script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+
     {{ Html::script("js/backend/plugin/geocomplete/jquery.geocomplete.js") }}
     {{ Html::script("js/backend/plugin/input-mask/jquery.inputmask.js") }}
     {{ Html::script("js/backend/plugin/input-mask/jquery.inputmask.date.extensions.js") }}
@@ -218,13 +216,13 @@ thead {
             $('#startDate').val(startDate);
             $('#endDate').val(endDate);
             $.ajax({
-                url : baseURL + '/admin/lead/getleadPerformanceByDate',
+                url : baseURL + '/admin/lead/leadUploadByDate',
                 type : 'get',
                 'data' : 'startDate='+startDate+'&endDate='+endDate,
                 success: function(response)
                 {
                     $("#calendar-filter").removeClass("active");
-                    $('#workforce-table').html(response);
+                    $('#upload-data-table').html(response);
                     $('#resultPerformance').html('<small>Display results from '+startDate+' to '+endDate+'. </small>');
                     $('#filter-message').html('');
                     $('#btnExport').attr("disabled", false);
@@ -244,35 +242,30 @@ thead {
         });
     });
 
-    function refershPerformance()
-    {
-        $('#filter-message').html('');
-        $('#refresh-performance').toggleClass('active');
-        $('#refresh-performance').attr("disabled", true);
-        $('#btnExport').attr("disabled", true);
-        $('#source-filter').attr("disabled", true);
+function getUploadDetail(source,stDate,enDate)
+{
 
-        $('#filter-message').html('<small>Data has been updating. Please do not close or refresh page. </small>');
-        $.ajax({
-            url : baseURL + '/admin/lead/getleadPerformance',
-            type : 'get',
-            success: function(response)
-            {
-                $('#resultPerformance').html('');
-                $('#workforce-table').html(response);
-                $("#refresh-performance").removeClass("active");
-                $('#refresh-performance').attr("disabled", false);
-                $('#filter-message').html('');
-                $('#btnExport').attr("disabled", false);
-                $('#source-filter').attr("disabled", false);
-            }
-        });
-    }
-    function fnExcelReport()
+    $.ajax({
+                url : baseURL + '/admin/lead/leadUploadDetails',
+                type : 'get',
+                'data' : 'medium='+source+'&startDate='+stDate+'&endDate='+enDate,
+                success: function(response)
+                {
+
+                    $('#modal-head').html(source);
+                    $('#modal-sub-head').html('<small>From '+stDate+' To '+enDate+'.');
+
+                    $('#modal-table').html(response);
+                    $('#myModal').modal('show');
+                }
+            });
+}
+
+function fnExcelReport()
 {
     var tab_text="<table><tr bgcolor='#87AFC6'>";
     var textRange; var j=0;
-    tab = document.getElementById('workforce-table'); // id of table
+    tab = document.getElementById('upload-data-table'); // id of table
 
     for(j = 0 ; j < tab.rows.length ; j++) 
     {     
@@ -302,42 +295,5 @@ thead {
     return (sa);
 }
 
-$(document).ready(function() {
-    $('#langOpt').multiselect({
-    columns: 1,
-    placeholder: 'Select Source',
-    search: true
-    });
-});
-
-function filterSource()
-{
-    $('#calendar-filter').toggleClass('active');
-    $('#refresh-performance').attr("disabled", true);
-    $('#btnExport').attr("disabled", true);
-    $('#filter-message').html('<small>Preparing data. Please do not close or refresh page. </small>');
-    $('#source-filter').attr("disabled", true);
-    var open = [];
-    $("#langOpt option:selected").each(function(){
-        open.push($(this).val());
-    });
-    var sources = open.join(",");
-    startDate = $('#startDate').val();
-    endDate = $('#endDate').val();
-    $.ajax({
-                url : baseURL + '/admin/lead/getleadPerformanceByfilter',
-                type : 'get',
-                'data' : 'startDate='+startDate+'&endDate='+endDate+'&sources='+sources,
-                success: function(response)
-                {
-                    $("#calendar-filter").removeClass("active");
-                    $('#workforce-table').html(response);
-                    $('#filter-message').html('');
-                    $('#btnExport').attr("disabled", false);
-                    $('#refresh-performance').attr("disabled", false);
-                    $('#source-filter').attr("disabled", false);
-                }
-            });
-}
-    </script>
+</script>
 @endsection

@@ -170,6 +170,7 @@ class DataUserRepository extends BaseRepository
             ->whereNotNull('data_medium')
             ->where('data_medium','!=' ,'')
             ->groupBy('data_medium')
+            ->orderBy('data_medium')
             ->pluck('data_medium');
     }
 
