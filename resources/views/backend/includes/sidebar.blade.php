@@ -64,20 +64,32 @@
                 </ul>
             </li>
             @endauth
-
+            @roles(['Manager','Executive'])
             <li class="{{ active_class(Active::checkUriPattern('admin/lead')) }}">
                 <a href="{{ route('admin.lead.index') }}">
                     <i class="fa fa-phone"></i>
                     <span>{{ trans('menus.backend.sidebar.lead') }}</span>
                 </a>
             </li>
-
+            @endauth
             @role('Manager')
             
             <li class="{{ active_class(Active::checkUriPattern('admin/assigned/leads')) }}">
                 <a href="{{ route('admin.lead.assigned') }}">
                     <i class="fa fa-microphone"></i>
                     <span>{{ trans('menus.backend.sidebar.lead_assigned') }}</span>
+                </a>
+            </li>
+            <li class="{{ active_class(Active::checkUriPattern('admin/lead/expiringPlan')) }}">
+                <a href="{{ route('admin.reports.expiringPlan') }}">
+                    <i class="fa fa-refresh"></i>
+                    <span>Re-pitch Next Annual Kit</span>
+                </a>
+            </li>
+            <li class="{{ active_class(Active::checkUriPattern('admin/lead/expiringPlanReSale')) }}">
+                <a href="{{ route('admin.reports.expiringPlanReSale') }}">
+                    <i class="fa fa-money"></i>
+                    <span>Re-pitch Re-sale</span>
                 </a>
             </li>
             <li class="{{ active_class(Active::checkUriPattern('admin/lead/call_history')) }}">
@@ -94,6 +106,13 @@
                 </a>
             </li>
 
+           <!--  <li class="{{ active_class(Active::checkUriPattern('admin/workforce')) }}">
+                <a href="#">
+                    <i class="fa fa-users"></i>
+                    <span>{{ trans('menus.backend.sidebar.workforce') }}</span>
+                </a>
+            </li> -->
+
             <li class="{{ active_class(Active::checkUriPattern('admin/data/bank')) }}">
                 <a href="{{ route('admin.data.bank.index') }}">
                     <i class="fa fa-database"></i>
@@ -101,14 +120,37 @@
                 </a>
             </li>
             @endauth
-
+            @roles(['Manager','Executive'])
             <li class="{{ active_class(Active::checkUriPattern('admin/data/bank/create')) }}">
                 <a href="{{ route('admin.data.bank.create') }}">
                     <i class="fa fa-plus"></i>
                     <span>Create Lead</span>
                 </a>
             </li>
-            
+            @endauth
+            @roles(['Manager','Delight Team'])
+            <li class="{{ active_class(Active::checkUriPattern('admin/sales/delight')) }}">
+                <a href="{{ route('admin.sales.index') }}">
+                    <i class="fa fa-line-chart"></i>
+                    <span>Delight Sales</span>
+                </a>
+            </li>
+            @endauth
+            @role('Manager')
+           <!--  <li class="{{ active_class(Active::checkUriPattern('admin/sales/delight')) }}">
+                <a href="{{ route('admin.sales.index') }}">
+                    <i class="fa fa-line-chart"></i>
+                    <span>Delight Sales</span>
+                </a>
+            </li> -->
+            <li class="{{ active_class(Active::checkUriPattern('admin/fb/getCampaign')) }}">
+                <a href="{{ route('admin.fb.index') }}">
+                    <i class="fa fa-facebook"></i>
+                    <span>FB Campaigns</span>
+                </a>
+            </li>
+            @endauth
+
             @role('Manager')
             <li class="{{ active_class(Active::checkUriPattern('admin/search')) }}">
                 <a href="{{ route('admin.search.index') }}">
@@ -121,6 +163,35 @@
                     <i class="fa fa-key"></i>
                     <span>OTP</span>
                 </a>
+            </li>
+            <li class="{{ active_class(Active::checkUriPattern('hmvisits')) }}">
+                <a href="{{ route('admin.hmvisits') }}">
+                    <i class="fa fa-comment"></i>
+                    <span>HM Visits</span>
+                </a>
+            </li>
+            <li class="{{ active_class(Active::checkUriPattern('admin/reports/*')) }} treeview">
+                <a href="#">
+                    <i class="fa fa-file"></i>
+                    <span>Reports</span>
+                    <i class="fa fa-angle-left pull-right"></i>
+                </a>
+
+                <ul class="treeview-menu {{ active_class(Active::checkUriPattern('admin/reports/sales'), 'menu-open') }}">
+                    <li class="{{ active_class(Active::checkUriPattern('admin/reports/sales*')) }}">
+                        <a href="{{ route('admin.reports.sales') }}">
+                            <i class="fa fa-circle-o"></i>
+                            <span>Sales Report</span>
+                        </a>
+                    </li>
+
+                    <li class="{{ active_class(Active::checkUriPattern('admin/reports/leads*')) }}">
+                        <a href="{{ route('admin.reports.leads') }}">
+                            <i class="fa fa-circle-o"></i>
+                            <span>Leads Report</span>
+                        </a>
+                    </li>
+                </ul>
             </li>
             @endauth
 

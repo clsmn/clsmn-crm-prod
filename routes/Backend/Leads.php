@@ -13,6 +13,8 @@ Route::group([
      */
     //Route::resource('lead', 'LeadController');
     Route::get('lead', 'LeadController@index')->name('index');
+    Route::get('cloudCall', 'LeadController@cloudCall')->name('cloudCall');
+    Route::get('getIncomingDetail', 'LeadController@getIncomingDetail')->name('lead.getIncomingDetail');
     Route::group([
         'middleware' => 'access.routeNeedsRole:Manager',
     ], function () {
@@ -52,6 +54,7 @@ Route::group([
     Route::post('lead/follow_ups', 'LeadTableController@followUpList')->name('call.follow_up.get');
     Route::post('lead/call/transferred', 'LeadTableController@transferredList')->name('call.transferred');
     Route::post('lead/called/get', 'LeadTableController@calledList')->name('called.get');
+    Route::post('lead/called/getincoming', 'LeadTableController@calledincomingList')->name('called.get.incoming');
     Route::post('lead/called/manager/get', 'LeadTableController@calledManagerList')->name('called.manager.get');
     Route::post('lead/search', 'LeadTableController@searchLead')->name('search');
 
@@ -60,5 +63,6 @@ Route::group([
     ], function () {
         Route::get('assigned/leads', 'LeadController@listAssignedLeads')->name('assigned');
         Route::post('assigned/leads/get', 'LeadTableController@leadList')->name('assigned.get');
+        Route::post('getAssignedlead', 'LeadTableController@getAssignedlead')->name('assigned.getAssignedlead');
     });
 });

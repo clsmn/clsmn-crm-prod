@@ -25,6 +25,7 @@ return [
     'data_user_table' => 'data_user',
 
     'call_history_table' => 'call_history',
+    'call_history_data_table' => 'call_history_data',
 
     /*
      * Alternate Number table used to store leads alternate numbers

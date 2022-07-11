@@ -32,6 +32,7 @@
                             <th>{{ trans('labels.backend.access.users.table.name') }}</th>
                             <th>Phone</th>
                             <th>{{ trans('labels.backend.access.users.table.email') }}</th>
+                            <th>Username</th>
                             <th>{{ trans('labels.backend.access.users.table.confirmed') }}</th>
                             <th>{{ trans('labels.backend.access.users.table.roles') }}</th>
                             <th>{{ trans('labels.backend.access.users.table.created') }}</th>
@@ -76,6 +77,7 @@
                     {data: 'name', name: '{{config('access.users_table')}}.name'},
                     {data: 'phone', name: '{{config('access.users_table')}}.phone'},
                     {data: 'email', name: '{{config('access.users_table')}}.email'},
+                    {data: 'office24by_username', name: '{{config('access.users_table')}}.office24by_username'},
                     {data: 'confirmed', name: '{{config('access.users_table')}}.confirmed'},
                     {data: 'roles', name: '{{config('access.roles_table')}}.name', sortable: false},
                     {data: 'created_at', name: '{{config('access.users_table')}}.created_at'},

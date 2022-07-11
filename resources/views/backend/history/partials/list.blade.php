@@ -1,5 +1,7 @@
 <ul class="timeline">
-    @each('backend.history.partials.item', $history, 'historyItem')
+    @foreach($history as $historyItem)
+        @include('backend.history.partials.item')
+    @endforeach
 </ul>
 
 @if ($paginate)

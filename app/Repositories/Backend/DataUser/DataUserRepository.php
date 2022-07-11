@@ -5,6 +5,7 @@ namespace App\Repositories\Backend\DataUser;
 use App\Models\Lead\Lead;
 use App\Models\Data\DataUser;
 use App\Models\Data\DataChild;
+use App\Models\Data\RepitchAssigned;
 use App\Models\Access\User\User;
 use Illuminate\Support\Facades\DB;
 use App\Exceptions\GeneralException;
@@ -34,6 +35,8 @@ class DataUserRepository extends BaseRepository
         $subscriptionType = $request->get('subscription_type');
         $city = $request->get('city');
         $searchTerm = $request->get('searchTerm');
+        $country = $request->get('country');
+        $country_code = $request->get('country_code');
 
         $dataTableQuery = DB::table('data_user as du')
                             ->leftJoin('users as u', 'u.id', '=', 'du.assigned_to');
@@ -45,8 +48,12 @@ class DataUserRepository extends BaseRepository
                 'du.messenger',
                 'du.learning',
                 'du.community',
+                'du.child_name',
+                'du.ageGroup',
+                'du.message',
                 'du.city',
                 'du.data_medium',
+                'du.lead_from',
                 'du.phase',
                 'du.subscription_type',
                 'du.moved_to_lead',
@@ -60,10 +67,17 @@ class DataUserRepository extends BaseRepository
         {
             $dataTableQuery->where('du.city', $city);
         }
-        if($searchTerm != '' && $searchTerm != NULL)
+        if($searchTerm != '' && $searchTerm != NULL && is_numeric($searchTerm) == 1)
         {
             $dataTableQuery->where('du.phone', 'like', '%'.$searchTerm.'%');
+           
         }
+        if($searchTerm != '' && $searchTerm != NULL && is_numeric($searchTerm) != 1)
+        {
+            $dataTableQuery->where('du.lead_from', 'like', '%'.$searchTerm.'%');
+           
+        }
+        
         if($medium != '' && $medium != NULL)
         {
             $dataTableQuery->where('du.data_medium', $medium);
@@ -79,6 +93,24 @@ class DataUserRepository extends BaseRepository
         if($lastCallBefore != '' && $lastCallBefore != NULL)
         {
             $dataTableQuery->whereDate('du.lead_last_call', '<=', $lastCallBefore);
+        }
+        if($country != '' && $country != NULL && $country == 'IN')
+        {
+            $dataTableQuery->where('du.country_code', '+91');
+            $dataTableQuery->orWhere('du.country_code', '91');
+        }
+        if($country != '' && $country != NULL && $country == 'Other')
+        {
+            if($country_code != '' && $country_code != NULL)
+            {
+                $cc = str_replace('+','',$country_code);
+                $dataTableQuery->where('du.country_code', '+'.$cc);
+                $dataTableQuery->orWhere('du.country_code', $cc);
+            }
+            else
+            {
+                $dataTableQuery->where('du.country_code', 'not like', '%91');
+            }
         }
         if($subscriptionType != 'all')
         {
@@ -97,8 +129,10 @@ class DataUserRepository extends BaseRepository
 
         if($startDate != null && $startDate != '' && $endDate != null && $endDate != '')
         {
-            $dataTableQuery->whereDate('du.created_at', '>=', $startDate);
-            $dataTableQuery->whereDate('du.created_at', '<=', $endDate);
+            $dataTableQuery->whereDate('du.updated_at', '>=', $startDate);
+            $dataTableQuery->whereDate('du.updated_at', '<=', $endDate);
+            // $dataTableQuery->whereDate('du.created_at', '>=', $startDate);
+            // $dataTableQuery->whereDate('du.created_at', '<=', $endDate);
         }
         $dataTableQuery->orderBy('updated_at', 'DESC');
         return $dataTableQuery;
@@ -248,6 +282,7 @@ class DataUserRepository extends BaseRepository
                         $lead->assigned_to       = $user->id;
                         $lead->lead_stage        = $row->lead_stage;
                         $lead->call_date         = $callDate;
+                        $lead->assigned_at = date('Y-m-d H:i:s');
                         $lead->save();
     
                         event(new LeadAssigned($lead, $user));
@@ -258,8 +293,126 @@ class DataUserRepository extends BaseRepository
                         $lead->assigned_to = $user->id;
                         $lead->lead_status = 'open';
                         $lead->assigned_type = 'transferred';
+                        $lead->assigned_at = date('Y-m-d H:i:s');
                         $lead->update();
                         
+                        history()->withType('Lead')
+                                ->withSubType('assigned')
+                                ->withEntity($lead->id)
+                                ->withText('trans("history.backend.lead.transferred")')
+                                ->withIcon('plus')
+                                ->withClass('bg-green')
+                                ->withAssets([
+                                    'user_string' => $user->name,
+                                    'olduser_string' => ($oldUser)? $oldUser->name:'',
+                                    'date_string' => date('d M y'),
+                                ])
+                                ->log();
+                    }
+                }
+
+                return true;
+            }
+        });
+
+    }
+
+     function assignLeadToExecutive1($request)
+    {
+        $dataUserId = $request->get('dataUserId');
+        $executive = $request->get('executive');
+        $callDate = $request->get('callDate');
+        $assignToMass = $request->get('assignToMass');
+        $ids = $request->get('id');
+        $assign_type = $request->get('assign_type');
+        
+        $arr = explode('/', $callDate);
+        $callDate = $arr[2].'-'.$arr[1].'-'.$arr[0];
+
+        $user = User::findOrFail($executive);
+
+        DB::transaction(function () use ($user, $dataUserId, $callDate, $assignToMass, $ids, $assign_type) {
+          
+                $data = DataUser::whereIn('id', $ids)->get();    
+            
+            if($data->count() > 0)
+            {
+                //update moved_to_lead in data pool.
+                //$dataIds = $data->pluck('id');
+                //DataUser::whereIn('id', $dataIds)->update(['moved_to_lead' => '1', 'assigned_to' => $user->id]);
+
+                foreach($data as $row)
+                {
+                    DataUser::where('id', $row->id)->update(['moved_to_lead' => '1', 'lead_status' => 'open', 'assigned_to' => $user->id, 'updated_at' => $row->updated_at]);
+                    $lead = Lead::where('country_code', $row->country_code)->where('phone', $row->phone)->first();
+                    if(!$lead)
+                    {
+                        $lead = new Lead;
+                        $lead->data_user_id      = $row->id;
+                        $lead->name              = $row->name;
+                        $lead->email             = $row->email;
+                        $lead->country_code      = $row->country_code;
+                        $lead->phone             = $row->phone;
+                        $lead->messenger         = $row->messenger;
+                        $lead->messenger_id      = $row->messenger_id;
+                        $lead->learning          = $row->learning;
+                        $lead->learning_id       = $row->learning_id;
+                        $lead->community         = $row->community;
+                        $lead->community_id      = $row->community_id;
+                        $lead->login_id          = $row->login_id;
+                        $lead->status            = $row->status;
+                        $lead->lat_long          = $row->lat_long;
+                        $lead->locality          = $row->locality;
+                        $lead->city              = $row->city;
+                        $lead->state             = $row->state;
+                        $lead->country           = $row->country;
+                        $lead->data_medium       = $row->data_medium;
+                        $lead->email_verified    = $row->email_verified;
+                        $lead->last_activity     = $row->last_activity;
+                        $lead->registered_on     = $row->registered_on;
+                        $lead->assigned_to       = $user->id;
+                        $lead->lead_stage        = $row->lead_stage;
+                        $lead->call_date         = $callDate;
+                        $lead->assigned_at = date('Y-m-d H:i:s');
+                        $lead->save();
+
+                        $repitch = new RepitchAssigned;
+                        $repitch->data_user_id      =   $row->id;
+                        $repitch->name              =   $row->name;
+                        $repitch->email             =   $row->email;
+                        $repitch->country_code      =   $row->country_code;
+                        $repitch->phone             =   $row->phone;
+                        $repitch->city              =   $row->city;
+                        $repitch->state             =   $row->state;
+                        $repitch->country           =   $row->country;
+                        $repitch->data_medium       =   $row->data_medium;
+                        $repitch->assigned_to       =   $user->id;
+                        $repitch->save();
+
+                        event(new LeadAssigned($lead, $user));
+                    }else{
+                        $oldUser = User::find($lead->assigned_to);
+
+                        $lead->done = '0';
+                        $lead->assigned_to = $user->id;
+                        $lead->lead_status = 'open';
+                        $lead->assigned_type = 'transferred';
+                        $lead->assigned_at = date('Y-m-d H:i:s');
+                        $lead->update();
+                        
+                        $repitch = new RepitchAssigned;
+                        $repitch->data_user_id      =   $lead->data_user_id;
+                        $repitch->name              =   $lead->name;
+                        $repitch->email             =   $lead->email;
+                        $repitch->country_code      =   $lead->country_code;
+                        $repitch->phone             =   $lead->phone;
+                        $repitch->city              =   $lead->city;
+                        $repitch->state             =   $lead->state;
+                        $repitch->country           =   $lead->country;
+                        $repitch->data_medium       =   $lead->data_medium;
+                        $repitch->assigned_to       =   $user->id;
+                        $repitch->save();
+
                         history()->withType('Lead')
                                 ->withSubType('assigned')
                                 ->withEntity($lead->id)

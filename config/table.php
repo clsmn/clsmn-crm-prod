@@ -21,6 +21,7 @@ return [
         'subscriptions'             => 'tbl_learning_subscriptions',
         'children'                  => 'tbl_learning_children',
         'crm_request'               => 'tbl_learning_crm_request',
+        'users'                     => 'tbl_learning_learning_users',
     ],
 
 ];

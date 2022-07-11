@@ -342,6 +342,85 @@ class LeadRepository extends BaseRepository
         $city = $request->get('city');
         $search = $request->get('search');
 
+        // $query = CallHistoryData::with(['lead' => function($query){
+        //             $query->select([
+        //                 'id',
+        //                 'country_code',
+        //                 'phone',
+        //                 'name',
+        //                 'last_call',
+        //                 'next_follow_up',
+        //                 'lead_status',
+        //                 'assigned_to',
+        //             ]);
+        //         }])
+        //         ->where(config('access.call_history_data_table').'.called_by', $user->id)
+        //         ->where(config('access.call_history_data_table').'.saved', '1');
+
+        $query = DB::table('call_history_data')->leftJoin('leads', 'leads.id', '=', 'call_history_data.lead_id')
+                ->select([
+                    'call_history_data.*',
+                    'leads.country_code as lead_country_code',
+                    'leads.phone as lead_phone',
+                    'leads.name as lead_name',
+                    'leads.last_call as lead_last_call',
+                    'leads.next_follow_up as lead_next_follow_up',
+                    'leads.lead_status as lead_lead_status',
+                    // 'leads.assigned_to',
+                ])
+                ->where(config('access.call_history_data_table').'.called_by', $user->id)
+                ->where(config('access.call_history_data_table').'.saved', '1');
+        if($medium != null && $medium != '')
+        {
+            // $query->whereHas('lead', function($q) use($medium){
+            //     $q->where('data_medium', $medium);
+            // });
+            $query->where('leads.data_medium', $medium);
+        }
+        if($city != null && $city != '')
+        {
+            // $query->whereHas('lead', function($q) use($city){
+            //     $q->where('city', $city);
+            // });
+            $query->where('leads.city', $city);
+        }
+
+        // if($search['value'] == null || $search['value'] == '')
+        // {
+            if($startDate != null && $startDate != '' && $endDate != null && $endDate != '')
+            {
+                $query->whereDate(config('access.call_history_data_table').'.created_at', '>=', $startDate);
+                $query->whereDate(config('access.call_history_data_table').'.created_at', '<=', $endDate);
+            }
+            else
+            {
+                $query->whereDate(config('access.call_history_data_table').'.created_at', '>=', date("Y-m-d", strtotime("-2 day")));
+            }
+        // }
+
+        if($leadStatus != '')
+        {
+            $query->where( config('access.call_history_data_table').'.lead_status', $leadStatus);    
+        }
+        // $query->whereIn(config('access.call_history_table').'.id', function($q){
+        //     $q->select(DB::raw('MAX(id) FROM '.config('access.call_history_table').' WHERE saved="1" GROUP BY lead_id'));
+        // });
+        // $query->groupBy(config('access.call_history_table').'.lead_id');
+        $query->orderBy(config('access.call_history_data_table').'.created_at', 'DESC');
+
+        return $query;
+    }
+
+      function getCallIncomingHistoryForDataTable($request)
+    {
+        $user = $request->user();
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
+        $leadStatus = $request->get('lead_status');
+        $medium = $request->get('medium');
+        $city = $request->get('city');
+        $search = $request->get('search');
+
         $query = CallHistory::with(['lead' => function($query){
                     $query->select([
                         'id',
@@ -385,6 +464,7 @@ class LeadRepository extends BaseRepository
         $query->whereIn(config('access.call_history_table').'.id', function($q){
             $q->select(DB::raw('MAX(id) FROM '.config('access.call_history_table').' WHERE saved="1" GROUP BY lead_id'));
         });
+        $query->where('office_callType', 'Incoming'); 
         $query->groupBy(config('access.call_history_table').'.lead_id');
         $query->orderBy(config('access.call_history_table').'.created_at', 'DESC');
 
@@ -410,15 +490,15 @@ class LeadRepository extends BaseRepository
                         'call_history.id', 'call_history.exotel_sid','call_history.duration', 'call_history.call_record_file', 'call_history.called_by', 'call_history.created_at',
                         'u1.name as called_by_name', 'u2.name as assigned_to_name', 'l.frequency']);
         // $query = DB::table('call_history')
-        //                 ->leftJoin('leads as l', 'l.id', 'call_history.lead_id')
-        //                 ->leftJoin('users as u1', 'u1.id', 'call_history.called_by')
+        //                 ->leftJoin('leads as l', 'l.id', 'call_history_data.lead_id')
+        //                 ->leftJoin('users as u1', 'u1.id', 'call_history_data.called_by')
         //                 ->leftJoin('users as u2', 'u2.id', 'l.assigned_to')
-        //                 ->join(DB::raw('(Select max(id) as id from '.config('access.call_history_table').' group by lead_id) LastCallRow'), function($join) {
-        //                     $join->on('call_history.id', '=', 'LastCallRow.id');
+        //                 ->join(DB::raw('(Select max(id) as id from '.config('access.call_history_data_table').' group by lead_id) LastCallRow'), function($join) {
+        //                     $join->on('call_history_data.id', '=', 'LastCallRow.id');
         //                 })
         //                 ->select(['l.id as lead_id', 'l.data_user_id', 'l.phone', 'l.name', 'l.data_medium', 'l.last_call', 'l.next_follow_up', 'l.lead_status', 'l.assigned_to', 
-        //                 'call_history.id', 'call_history.exotel_sid','call_history.duration', 'call_history.call_record_file', 'call_history.called_by', 'call_history.created_at',
-        //                 'u1.name as called_by_name', 'u2.name as assigned_to_name', DB::raw('count(call_history.lead_id) as frequency')]);
+        //                 'call_history_data.id', 'call_history_data.exotel_sid','call_history_data.duration', 'call_history_data.call_record_file', 'call_history_data.called_by', 'call_history_data.created_at',
+        //                 'u1.name as called_by_name', 'u2.name as assigned_to_name', DB::raw('count(call_history_data.lead_id) as frequency')]);
 
         if($frequency != null && $frequency != '')
         {
@@ -434,7 +514,13 @@ class LeadRepository extends BaseRepository
             $query->whereDate(config('access.call_history_table').'.created_at', '>=', $startDate);
             $query->whereDate(config('access.call_history_table').'.created_at', '<=', $endDate);
         }
-
+        else
+        {
+            $startDate = date('Y-m-d', strtotime('-29 days'));
+            $endDate = date('Y-m-d');
+            $query->whereDate(config('access.call_history_table').'.created_at', '>=', $startDate);
+            $query->whereDate(config('access.call_history_table').'.created_at', '<=', $endDate);
+        }
         $query->where(config('access.call_history_table').'.saved', '1');
 
         if($leadStatus != '')
@@ -445,10 +531,7 @@ class LeadRepository extends BaseRepository
         {
             $query->where(config('access.call_history_table').'.called_by', $executive);    
         }
-        // $query->whereIn(config('access.call_history_table').'.id', function($q){
-        //     $q->select(DB::raw('MAX(id) FROM '.config('access.call_history_table').' GROUP BY lead_id'));
-        // });
-        // $query->groupBy(config('access.call_history_table').'.lead_id');
+       
         $query->orderBy(config('access.call_history_table').'.created_at','DESC');
 
         return $query;
@@ -485,7 +568,13 @@ class LeadRepository extends BaseRepository
             $query->whereDate(config('access.call_history_table').'.created_at', '>=', $startDate);
             $query->whereDate(config('access.call_history_table').'.created_at', '<=', $endDate);
         }
-
+        else
+        {
+            $startDate = date('Y-m-d', strtotime('-29 days'));
+            $endDate = date('Y-m-d');
+            $query->whereDate(config('access.call_history_table').'.created_at', '>=', $startDate);
+            $query->whereDate(config('access.call_history_table').'.created_at', '<=', $endDate);
+        }
         $query->where(config('access.call_history_table').'.saved', '1');
 
         if($leadStatus != '')
@@ -993,6 +1082,72 @@ class LeadRepository extends BaseRepository
         $dataTableQuery->orderBy(config('access.call_history_table').'.created_at', 'DESC');
 
         return $dataTableQuery->paginate(env('PER_PAGE'));
+    }
+
+     function getCallHistoryForAPI1($request)
+    {
+        $user           = $request->user();
+        $startDate      = $request->get('start_date');
+        $endDate        = $request->get('end_date');
+        $medium         = $request->get('medium');
+        $type           = $request->get('type');
+        $query          = $request->get('query');
+
+        // $dataTableQuery = DB::table('leads as l')
+        //                 ->leftJoin('call_history', 'call_history.id', 'l.last_call_id')
+        //                 ->leftJoin('users as u1', 'u1.id', 'call_history.called_by')
+        //                 ->leftJoin('users as u2', 'u2.id', 'l.assigned_to')
+        //                 ->select(['l.id as lead_id', 'l.data_user_id', 'l.country_code','l.phone', 'l.name', 'l.data_medium', 'l.last_call', 'l.next_follow_up', 'l.lead_status', 'l.assigned_to', 
+        //                 'call_history.id', 'call_history.exotel_sid','call_history.duration', 'call_history.call_record_file', 'call_history.called_by', 'call_history.created_at',
+        //                 'u1.name as called_by_name', 'u2.name as assigned_to_name'])
+        //                 ->where('call_history.called_by', $user->id);
+
+
+        // $dataTableQuery = DB::table('leads as l')
+        //                 ->leftJoin('call_history', 'call_history.id',  '=', 'l.last_call_id')
+        //                 // ->leftJoin('users as u1', 'u1.id', 'call_history.called_by')
+        //                 // ->leftJoin('users as u2', 'u2.id', 'l.assigned_to')
+        //                 ->select(['l.*','l.id as lead_id','call_history.*'])
+        //                 ->where('call_history.called_by', 197);
+        //                 ->get();
+        $dataTableQuery = DB::table('leads')
+                    // ->select('leads.*','leads.id as lead_id','call_history.*')
+                    ->select('leads.id as lead_id', 'leads.data_user_id', 'leads.country_code','leads.phone', 'leads.name', 'leads.data_medium', 'leads.last_call', 'leads.next_follow_up', 'leads.lead_status', 'leads.assigned_to', 
+                        'call_history.id', 'call_history.exotel_sid','call_history.duration', 'call_history.call_record_file', 'call_history.called_by', 'call_history.created_at',
+                        'u1.name as called_by_name', 'u2.name as assigned_to_name')
+                    ->leftJoin('call_history', 'call_history.id', '=', 'leads.last_call_id')
+                    ->leftJoin('users as u1', 'u1.id', '=', 'call_history.called_by')
+                    ->leftJoin('users as u2', 'u2.id', '=', 'leads.assigned_to')
+                    ->where('call_history.called_by', $user->id)
+                    ->paginate(10);
+                    // ->get();
+
+        
+        // if($query != null && $query != '')
+        // {
+        //     $dataTableQuery->where('leads.phone', 'like', $query.'%');
+        // }
+        // if($medium != null && $medium != '')
+        // {
+        //     $dataTableQuery->where('leads.data_medium', $medium);
+        // }
+
+        // if($startDate != null && $startDate != '' && $endDate != null && $endDate != '')
+        // {
+        //     $dataTableQuery->whereDate(config('access.call_history_table').'.created_at', '>=', $startDate);
+        //     $dataTableQuery->whereDate(config('access.call_history_table').'.created_at', '<=', $endDate);
+        // }
+
+        // if($type != '')
+        // {
+        //     $dataTableQuery->where( config('access.call_history_table').'.lead_status', $type);    
+        // }
+        // $dataTableQuery->get();
+        
+        // $dataTableQuery->orderBy(config('access.call_history_table').'.created_at', 'DESC');
+
+        return $dataTableQuery;
+        // return $dataTableQuery->paginate(10);
     }
 
     function addLeadNote($lead, $user, $request)

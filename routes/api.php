@@ -14,6 +14,21 @@ use Illuminate\Http\Request;
 */
 
 Route::post('/acr/webhook/{user}' , 'Api\WebhookController@acrWebhook');
+Route::post('/acr/webhookOffice' , 'Api\WebhookController@webhookOffice'); // webhook route for office24by7 back response after intiating call.
+Route::post('/acr/webhookOfficeIncoming' , 'Api\WebhookController@webhookOfficeIncoming'); // webhook route for office24by7 back response after Incoming call connected.
+Route::post('/acr/webhookOffice1' , 'Api\WebhookController@webhookOffice1'); // webhook route for office24by7 back response after intiating call.
+Route::post('/acr/contactNow' , 'Api\WebhookController@contactNow'); // Webhook to add data user from home page.
+Route::post('/acr/addDataUser' , 'Api\WebhookController@addDataUser'); // Webhook to add data user from home page.
+Route::post('/acr/addDataUserCPM13' , 'Api\WebhookController@addDataUserCPM13'); // Webhook to add data user from cpm13.
+Route::post('/acr/addDataUserLiveDemo' , 'Api\WebhookController@addDataUserLiveDemo'); // Webhook to add data user from cpm13.
+Route::post('/acr/addDataUserGifting' , 'Api\WebhookController@addDataUserGifting'); // Webhook to add data user from gifting page.
+Route::post('/acr/addDataUserlandingPages' , 'Api\WebhookController@addDataUserlandingPages'); // Webhook to add data user from gifting page.
+Route::post('/addGoogleLeadExtention' , 'Api\WebhookController@addGoogleLeadExtention'); // Webhook to add data user from gifting page.
+Route::post('/acr/addDataUserCoach' , 'Api\WebhookController@addDataUserCoach'); // Webhook to add data user from Mom Coach page.
+Route::post('/acr/updateCallHistory' , 'Api\WebhookController@updateCallHistory'); // Update call history record.
+Route::get('/acr/getaudio' , 'Api\WebhookController@getaudio'); // webhook to get audio file.
+Route::post('/delightSales' , 'Api\WebhookController@delightSales'); // Webhook to add data while createing order.
+Route::post('/zoomMeet' , 'Api\WebhookController@zoomMeet'); 
 Route::post('/lead' , 'Api\WebhookController@addLead');
 Route::post('/lead/phase' , 'Api\WebhookController@updateLeadPhase');
 Route::post('/subscription' , 'Api\WebhookController@subscriptionPurchased');

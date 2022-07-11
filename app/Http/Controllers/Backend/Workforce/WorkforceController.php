@@ -87,38 +87,58 @@ class WorkforceController extends Controller
                     $arr['calls'] = $row->calls;
                     $arr['call_time'] = ($row->total_call_time == null)? '0': round(($row->total_call_time/1000)/60);
                     $totalCallMinutes += $arr['call_time'];
-                    $arr['sale'] = CallHistory::where('called_by', $executive->id)
-                                            ->whereRaw(DB::raw('DATE(created_at) >= "'.$startDate.'" AND DATE(created_at) <= "'.$endDate.'"'))
-                                            ->where('lead_status', 'sale')
-                                            ->count();
-                    $arr['hot'] = CallHistory::where('called_by', $executive->id)
-                                            ->whereRaw(DB::raw('DATE(created_at) >= "'.$startDate.'" AND DATE(created_at) <= "'.$endDate.'"'))
-                                            ->where('lead_status', 'hot')
-                                            ->count();
-                    $arr['mild'] = CallHistory::where('called_by', $executive->id)
-                                            ->whereRaw(DB::raw('DATE(created_at) >= "'.$startDate.'" AND DATE(created_at) <= "'.$endDate.'"'))
-                                            ->where('lead_status', 'mild')
-                                            ->count();
-                    $arr['cold'] = CallHistory::where('called_by', $executive->id)
-                                            ->whereRaw(DB::raw('DATE(created_at) >= "'.$startDate.'" AND DATE(created_at) <= "'.$endDate.'"'))
-                                            ->where('lead_status', 'cold')
-                                            ->count();
-                    $arr['no_answer'] = CallHistory::where('called_by', $executive->id)
-                                            ->whereRaw(DB::raw('DATE(created_at) >= "'.$startDate.'" AND DATE(created_at) <= "'.$endDate.'"'))
-                                            ->where('lead_status', 'no_answer')
-                                            ->count();
-                    $arr['busy'] = CallHistory::where('called_by', $executive->id)
-                                            ->whereRaw(DB::raw('DATE(created_at) >= "'.$startDate.'" AND DATE(created_at) <= "'.$endDate.'"'))
-                                            ->where('lead_status', 'busy')
-                                            ->count();
-                    $arr['not_interested'] = CallHistory::where('called_by', $executive->id)
-                                            ->whereRaw(DB::raw('DATE(created_at) >= "'.$startDate.'" AND DATE(created_at) <= "'.$endDate.'"'))
-                                            ->where('lead_status', 'not_interested')
-                                            ->count();
-                    $arr['dead'] = CallHistory::where('called_by', $executive->id)
-                                            ->whereRaw(DB::raw('DATE(created_at) >= "'.$startDate.'" AND DATE(created_at) <= "'.$endDate.'"'))
-                                            ->where('lead_status', 'dead')
-                                            ->count();
+
+                    $data_work = DB::select("SELECT `lead_status`, COUNT(*) as total FROM `call_history` WHERE DATE(`created_at`) >= '".$startDate."' AND DATE(`created_at`) <= '".$endDate."' AND `called_by` = ".$executive->id." AND `saved` = '1' GROUP BY `lead_status`");
+
+                    $arr['sale'] = 0;
+                    $arr['hot'] = 0;
+                    $arr['mild'] = 0;
+                    $arr['cold'] = 0;
+                    $arr['no_answer'] = 0;
+                    $arr['busy'] = 0;
+                    $arr['not_interested'] = 0;
+                    $arr['dead'] = 0;
+                    foreach($data_work as $vv)
+                    {
+                       $arr[$vv->lead_status] = $vv->total; 
+                    }
+                    // $arr['name'] = $row->name;
+                    // $arr['id'] = $row->id;
+                    // $arr['calls'] = $row->calls;
+                    // $arr['call_time'] = ($row->total_call_time == null)? '0': round(($row->total_call_time/1000)/60);
+                    // $totalCallMinutes += $arr['call_time'];
+                    // $arr['sale'] = CallHistory::where('called_by', $executive->id)
+                    //                         ->whereRaw(DB::raw('DATE(created_at) >= "'.$startDate.'" AND DATE(created_at) <= "'.$endDate.'"'))
+                    //                         ->where('lead_status', 'sale')
+                    //                         ->count();
+                    // $arr['hot'] = CallHistory::where('called_by', $executive->id)
+                    //                         ->whereRaw(DB::raw('DATE(created_at) >= "'.$startDate.'" AND DATE(created_at) <= "'.$endDate.'"'))
+                    //                         ->where('lead_status', 'hot')
+                    //                         ->count();
+                    // $arr['mild'] = CallHistory::where('called_by', $executive->id)
+                    //                         ->whereRaw(DB::raw('DATE(created_at) >= "'.$startDate.'" AND DATE(created_at) <= "'.$endDate.'"'))
+                    //                         ->where('lead_status', 'mild')
+                    //                         ->count();
+                    // $arr['cold'] = CallHistory::where('called_by', $executive->id)
+                    //                         ->whereRaw(DB::raw('DATE(created_at) >= "'.$startDate.'" AND DATE(created_at) <= "'.$endDate.'"'))
+                    //                         ->where('lead_status', 'cold')
+                    //                         ->count();
+                    // $arr['no_answer'] = CallHistory::where('called_by', $executive->id)
+                    //                         ->whereRaw(DB::raw('DATE(created_at) >= "'.$startDate.'" AND DATE(created_at) <= "'.$endDate.'"'))
+                    //                         ->where('lead_status', 'no_answer')
+                    //                         ->count();
+                    // $arr['busy'] = CallHistory::where('called_by', $executive->id)
+                    //                         ->whereRaw(DB::raw('DATE(created_at) >= "'.$startDate.'" AND DATE(created_at) <= "'.$endDate.'"'))
+                    //                         ->where('lead_status', 'busy')
+                    //                         ->count();
+                    // $arr['not_interested'] = CallHistory::where('called_by', $executive->id)
+                    //                         ->whereRaw(DB::raw('DATE(created_at) >= "'.$startDate.'" AND DATE(created_at) <= "'.$endDate.'"'))
+                    //                         ->where('lead_status', 'not_interested')
+                    //                         ->count();
+                    // $arr['dead'] = CallHistory::where('called_by', $executive->id)
+                    //                         ->whereRaw(DB::raw('DATE(created_at) >= "'.$startDate.'" AND DATE(created_at) <= "'.$endDate.'"'))
+                    //                         ->where('lead_status', 'dead')
+                    //                         ->count();
                 }else{
                     $arr['name'] = $executive->name;
                     $arr['id'] = $executive->id;

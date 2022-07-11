@@ -5,7 +5,8 @@ namespace App\Repositories\Backend\History;
 use App\Models\History\History;
 use App\Models\History\HistoryType;
 use App\Exceptions\GeneralException;
-
+use Auth;
+use DB;
 /**
  * Class EloquentHistoryRepository.
  */
@@ -275,14 +276,55 @@ class EloquentHistoryRepository implements HistoryContract
      */
     public function renderEntity($type, $entity_id, $limit = null, $paginate = true, $pagination = 10)
     {
-        $history = History::with('user', 'type')->where('entity_id', $entity_id);
-        $history = $this->checkType($history, $type);
-        $history = $this->buildPagination($history, $limit, $paginate, $pagination);
-        if (! $history->count()) {
-            return trans('history.backend.none_for_entity', ['entity' => $type]);
+         if(Auth::user()->roles[0]->name == 'Administrator' || Auth::user()->roles[0]->name == 'Manager')
+        {
+            $history = History::with('user', 'type')->where('entity_id', $entity_id)->where('archived', 0);
+        }
+        else
+        {
+            $lead_assigned_date = DB::table('leads')->select('assigned_at','data_medium')->where('id',$entity_id)->first();
+
+            $total_history_count = DB::table('call_history')->select('id')->where('lead_id',$entity_id)->where('data_medium','FBL_REM_MS')->count();
+
+            $total_history_no_answer_count = DB::table('call_history')->select('id')->where('lead_id',$entity_id)->where('lead_status','no_answer')->where('data_medium','FBL_REM_MS')->count();
+
+            $source = $lead_assigned_date->data_medium;
+
+            if($lead_assigned_date->data_medium == 'FBL_REM_MS')
+            {
+                if($total_history_count == $total_history_no_answer_count)
+                {
+                    $history = History::with('user', 'type')->where('entity_id', $entity_id)->where('archived', 0)->where('created_at','>=',$lead_assigned_date->assigned_at)->orderBy('id', 'DESC');
+                }
+                else
+                {
+                    $history = History::with('user', 'type')->where('entity_id', $entity_id)->where('archived', 0);
+                }
+            }
+            else
+            {
+                $history = History::with('user', 'type')->where('entity_id', $entity_id);
+            }
+           
         }
 
+        $history = $this->checkType($history, $type);
+        $history = $this->buildPagination($history, $limit, $paginate, $pagination);
+
+        if (! $history->count()) 
+        {
+            return trans('history.backend.none_for_entity', ['entity' => $type]);
+        }
         return $this->buildList($history, $paginate);
+
+        // $history = History::with('user', 'type')->where('entity_id', $entity_id);
+        // $history = $this->checkType($history, $type);
+        // $history = $this->buildPagination($history, $limit, $paginate, $pagination);
+        // if (! $history->count()) {
+        //     return trans('history.backend.none_for_entity', ['entity' => $type]);
+        // }
+
+        // return $this->buildList($history, $paginate);
     }
 
     /**
@@ -297,7 +339,10 @@ class EloquentHistoryRepository implements HistoryContract
         $count = 1;
         $assetCount = count((is_countable($assets)?$assets:[]));
         $asset_count = count((is_countable($assets)?$assets:[])) + 1;
-
+        if(Auth::user()->roles[0]->name != 'Administrator' || Auth::user()->roles[0]->name != 'Manager')
+        {
+            $text = 'trans("history.backend.lead.assigned")';
+        }
         if ($assetCount) {
             $text = preg_replace_callback('/trans\(\"([^"]+)\"\)/', function ($matches) use($text){
                         $data = trans($matches[1]);
@@ -368,7 +413,11 @@ class EloquentHistoryRepository implements HistoryContract
      */
     public function buildList($history, $paginate = true)
     {
-        return view('backend.history.partials.list', ['history' => $history, 'paginate' => $paginate])
+        $total_history_count = DB::table('call_history')->select('id')->where('lead_id',$history[0]->entity_id)->where('data_medium','FBL_REM_MS')->count();
+
+        $total_history_no_answer_count = DB::table('call_history')->select('id')->where('lead_id',$history[0]->entity_id)->where('lead_status','no_answer')->where('data_medium','FBL_REM_MS')->count();
+        $source = DB::table('leads')->select('data_medium')->where('id',$history[0]->entity_id)->first();
+        return view('backend.history.partials.list', ['history' => $history, 'paginate' => $paginate,'total_history_count' => $total_history_count,'total_history_no_answer_count' => $total_history_no_answer_count,'source' => $source])
             ->render();
     }
 

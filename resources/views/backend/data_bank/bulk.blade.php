@@ -65,8 +65,12 @@
                             <small>Enter Campaign Name: </small> &nbsp;&nbsp;
                             <input type="text" name="camp" id="campValue" value="{{ $camp }}"> &nbsp;&nbsp; 
                             <span class="checkbox" style="display: inline-block">
-                                <input type="hidden" value="0" name="changeSource"/>
+                                <!-- <input type="hidden" value="0" name="changeSource"/> -->
                                 <label><input type="checkbox" value="1" name="changeSource"/> Change Source Name</label>
+                            </span> &nbsp;&nbsp;  &nbsp;&nbsp; 
+                            <span class="checkbox" style="display: inline-block">
+                                <!-- <input type="hidden" value="0" name="clear_history"/> -->
+                                <label><input type="checkbox" value="1" name="clear_history"/> Clear all lead history</label>
                             </span> &nbsp;&nbsp;  &nbsp;&nbsp; 
                             <a href="{{ url('/storage/Bulk-Create-Sample.xlsx') }}">Sample File</a> &nbsp;&nbsp;
                             <button class="btn btn-success btn-xs" type="submit">Upload</button>
@@ -170,7 +174,7 @@
                 </div>
             </div>
         </div>
-        <div class="box box-success">
+        <div class="box box-success" id="bulk-table">
             <div class="box-header with-border">
                 <h3 class="box-title">Bulk Lead</h3>
                 <div class="box-tools pull-right">
@@ -180,6 +184,12 @@
                             <span class="text-danger">Yes, Update Source</span>
                         @else
                             <span class="text-default">Don't Udpate Source</span>
+                        @endif
+                        &nbsp;&nbsp; 
+                          @if($clear_history=='1')
+                            <span class="text-danger">Yes, Clear History</span>
+                        @else
+                            <span class="text-default">Don't Clear History</span>
                         @endif
                         &nbsp;&nbsp; 
                         <button class="btn btn-success btn-xs" id="addAll">ADD ALL</button>
@@ -247,7 +257,8 @@
     {{ Html::script('plugins/EasyAutocomplete/jquery.easy-autocomplete.min.js') }}
     {{ Html::script("plugins/fileuploads/js/dropify.min.js") }}
     <script>
-    $(function() {
+
+       $(function() {
         var base_url = '{{ env("APP_URL", "") }}';
         $.ajaxSetup({
             headers:
@@ -271,7 +282,9 @@
         $("#campValue").easyAutocomplete(options);
         
         $('#addAll').click(function(){
-            
+             var arr = [];
+            $('#addAll').attr("disabled", true);
+            $("#overlay").fadeIn(300);
             $('.frm_row').each(function(){
                 let self = $(this);
                 let key = $(this).attr('data-val');
@@ -281,145 +294,189 @@
                 let city = $(this).find('.city').val();
                 let ad_platform = $(this).find('.ad_platform').val();
                 let change_source = '{{ $changeSource }}';
+                let clear_history = '{{ $clear_history=="1"? 1:0 }}';
                 
                 var notupload = 0;
-                $.ajax({
-                    url: base_url+'/admin/data/bank/bulk/create',
-                    type: 'put',
-                    data: {
-                        medium: '{{ $camp }}',
-                        name: name,
-                        country_code: country_code,
-                        phone: phone,
-                        city: city,
-                        ad_platform: ad_platform,
-                        change_source: change_source,
-                    },
-                    dataType: 'json',
-                    success: function(res){
-                        if(res.status == '200')
-                        {
-                            var alreadyExist = $('#alreadyExist').val();
-                            var newLead = $('#newLead').val();
-                            var errorLead = $('#errorLead').val();
-                            if(res.leadtype == "existing")
-                            {
-                               var existCount = +alreadyExist + 1;
-                               $('#alreadyExist').val(existCount);
-                               $('#alreadyExistText').html(existCount);
-                               $('#user-detailsAlready').append('<li>'+existCount+'. '+res.dataUser.name+' - '+res.dataUser.country_code+'-'+res.dataUser.phone+' </li>');
-
-                            }
-                            if(res.leadtype == "new")
-                            {
-                                var newCount = +newLead + 1;
-                                $('#newLead').val(newCount);
-                                $('#newLeadText').html(newCount);
-                                $('#user-detailsNew').append('<li>'+newCount+'. '+res.dataUser.name+' - '+res.dataUser.country_code+'-'+res.dataUser.phone+' </li>');
-                            }
-                            self.html('<td colspan="6" class="text-center">'+res.data+'</td>');
-
-
-                            // setTimeout(function(){
-                            //     self.remove();
-                            // }, 5000);
-                        }
-                        else{
-                            $('#msg-'+key).html(res.data);
-                            var errorCount = +errorLead + 1;
-                                $('#errorLead').val(errorCount);
-                                $('#errorLeadText').html(newCount);
-                                $('#user-detailsNew').append('<li>'+errorCount+'. '+res.dataUser.name+' - '+res.dataUser.country_code+'-'+res.dataUser.phone+' </li>');
-
-                        }
-                    },
-                    error: function(xhr) {
-                        if(xhr.status == 422) {
-                            if(xhr.responseJSON.phone != undefined)
-                            {
-                                self.find('.phone_error').html(xhr.responseJSON.phone[0]);
-                            }
-                            if(xhr.responseJSON.name != undefined)
-                            {
-                                self.find('.name_error').html(xhr.responseJSON.name[0]);
-                            }
-                        } else {
-                           $('#msg-'+key).html('xhr.responseText');
-                        }
-                        var errorLead = $('#errorLead').val();
-                        var errorCount = +errorLead + 1;
-                                $('#errorLead').val(errorCount);
-                                $('#errorLeadText').html(newCount);
-                                $('#user-detailsError').append('<li>'+errorCount+'. '+res.dataUser.name+' - '+res.dataUser.country_code+'-'+res.dataUser.phone+' </li>');
-                    }
-                })
-
+                arr.push({
+                    medium: '{{ $camp }}',
+                    name: name,
+                    country_code: country_code,
+                    phone: phone,
+                    city: city,
+                    ad_platform: ad_platform,
+                    change_source: change_source,
+                    clear_history: clear_history,
+                });
             });
-            $("#overlay").fadeIn(300);　
+
             setTimeout(function(){
-                bulkUpload();
-            }, 10000);
-        
+            
+                    bulkUpload(arr);
+                }, 2000);
+          
         });
-
     });
-
-function bulkUpload()
-{
-     $.ajax({
-        url : baseURL + '/admin/data/bank/bulk/upload_data',
-        type: 'POST',
-        dataType: 'json',
-        data: {
-                medium: '{{ $camp }}',
-            },
-        success: function(response)
-        {
-            $("#overlay").fadeOut(300);
-            // setTimeout(function(){
-            //     $("#overlay").fadeOut(300);
-            //   },5000);
-        }
+    function bulkUpload(arr)
+    {
+        var data = JSON.stringify(arr);
+        var base_url = '{{ env("APP_URL", "") }}';
+        $.ajax({
+           type: 'post',
+           data: {data:data},
+           url: base_url+'/admin/data/bank/bulk/create_new',
+           success: function(res){
+               $('#alreadyExist').val(res.exixtingCount);
+               $('#alreadyExistText').html(res.exixtingCount);
+               $('#user-detailsAlready').append(res.exixting);
+               $('#newLead').val(res.newcount);
+               $('#newLeadText').html(res.newcount);
+               $('#user-detailsNew').append(res.new);
+               $('#errorLead').val(res.errorcount);
+               $('#errorLeadText').html(res.errorcount);
+               $('#user-detailsError').append(res.error);
+               $('#bulk-table').hide();
+               $("#overlay").fadeOut(300);
+               $('#addAll').attr("disabled", false);
+           }
         });
-}
+    }
 
-// $( document ).ajaxComplete(function() {
-//     $.ajax({
-//     url : baseURL + '/admin/data/bank/bulk/upload_data',
-//     type: 'POST',
-//     dataType: 'json',
-//     data: {
-//             medium: '{{ $camp }}',
-//         },
-//     success: function(response)
-//     {
-//     }
-//     });
 
-// });
+    // $(function() {
+    //     var base_url = '{{ env("APP_URL", "") }}';
+    //     $.ajaxSetup({
+    //         headers:
+    //         { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
+    //     });
 
+    //     $('.dropify').dropify({
+    //         messages: {
+    //             'default': 'Drag and drop a file here or click',
+    //             'replace': 'Drag and drop or click to replace',
+    //             'remove': 'Remove',
+    //             'error': 'Ooops, something wrong appended.'
+    //         },
+    //         error: {
+    //             'fileSize': 'The file size is too big (1M max).'
+    //         }
+    //     });
+        
+    //     var options = JSON.parse('{!! $options !!}');
+
+    //     $("#campValue").easyAutocomplete(options);
+        
+    //     $('#addAll').click(function(){
+            
+    //         $('.frm_row').each(function(){
+    //             let self = $(this);
+    //             let key = $(this).attr('data-val');
+    //             let name = $(this).find('.name').val();
+    //             let country_code = $(this).find('.country_code').val();
+    //             let phone = $(this).find('.phone').val();
+    //             let city = $(this).find('.city').val();
+    //             let ad_platform = $(this).find('.ad_platform').val();
+    //             let change_source = '{{ $changeSource }}';
+                
+    //             var notupload = 0;
+    //             $.ajax({
+    //                 url: base_url+'/admin/data/bank/bulk/create',
+    //                 type: 'put',
+    //                 data: {
+    //                     medium: '{{ $camp }}',
+    //                     name: name,
+    //                     country_code: country_code,
+    //                     phone: phone,
+    //                     city: city,
+    //                     ad_platform: ad_platform,
+    //                     change_source: change_source,
+    //                 },
+    //                 dataType: 'json',
+    //                 success: function(res){
+    //                     if(res.status == '200')
+    //                     {
+    //                         var alreadyExist = $('#alreadyExist').val();
+    //                         var newLead = $('#newLead').val();
+    //                         var errorLead = $('#errorLead').val();
+    //                         if(res.leadtype == "existing")
+    //                         {
+    //                            var existCount = +alreadyExist + 1;
+    //                            $('#alreadyExist').val(existCount);
+    //                            $('#alreadyExistText').html(existCount);
+    //                            $('#user-detailsAlready').append('<li>'+existCount+'. '+res.dataUser.name+' - '+res.dataUser.country_code+'-'+res.dataUser.phone+' </li>');
+
+    //                         }
+    //                         if(res.leadtype == "new")
+    //                         {
+    //                             var newCount = +newLead + 1;
+    //                             $('#newLead').val(newCount);
+    //                             $('#newLeadText').html(newCount);
+    //                             $('#user-detailsNew').append('<li>'+newCount+'. '+res.dataUser.name+' - '+res.dataUser.country_code+'-'+res.dataUser.phone+' </li>');
+    //                         }
+    //                         self.html('<td colspan="6" class="text-center">'+res.data+'</td>');
+
+
+    //                         // setTimeout(function(){
+    //                         //     self.remove();
+    //                         // }, 5000);
+    //                     }
+    //                     else{
+    //                         $('#msg-'+key).html(res.data);
+    //                         var errorCount = +errorLead + 1;
+    //                             $('#errorLead').val(errorCount);
+    //                             $('#errorLeadText').html(newCount);
+    //                             $('#user-detailsNew').append('<li>'+errorCount+'. '+res.dataUser.name+' - '+res.dataUser.country_code+'-'+res.dataUser.phone+' </li>');
+
+    //                     }
+    //                 },
+    //                 error: function(xhr) {
+    //                     if(xhr.status == 422) {
+    //                         if(xhr.responseJSON.phone != undefined)
+    //                         {
+    //                             self.find('.phone_error').html(xhr.responseJSON.phone[0]);
+    //                         }
+    //                         if(xhr.responseJSON.name != undefined)
+    //                         {
+    //                             self.find('.name_error').html(xhr.responseJSON.name[0]);
+    //                         }
+    //                     } else {
+    //                        $('#msg-'+key).html('xhr.responseText');
+    //                     }
+    //                     var errorLead = $('#errorLead').val();
+    //                     var errorCount = +errorLead + 1;
+    //                             $('#errorLead').val(errorCount);
+    //                             $('#errorLeadText').html(newCount);
+    //                             $('#user-detailsError').append('<li>'+errorCount+'. '+res.dataUser.name+' - '+res.dataUser.country_code+'-'+res.dataUser.phone+' </li>');
+    //                 }
+    //             })
+
+    //         });
+    //         $("#overlay").fadeIn(300);　
+    //         setTimeout(function(){
+    //             bulkUpload();
+    //         }, 10000);
+        
+    //     });
+
+    // });
 
 // function bulkUpload()
 // {
-//     var datauser_name = $("input[name='datauser_name[]']")
-//               .map(function(){return $(this).val();}).get();
-//               // console.log(datauser_name);debugger;
-//   var formData = new FormData;
-//   // var name = $(name).val();
-//   formData.append('datauser_name', datauser_name);
-
-//   $.ajax({
-//     url : baseURL + '/admin/data/bank/bulk/create1',
-//     type: 'POST',
-//     dataType: 'json',
-//     data: formData,
-//     cache : false,
-//     processData: false,
-//     success: function(response)
-//     {
-//        console.log(response);debugger;
-//     }
-//     });
+//      $.ajax({
+//         url : baseURL + '/admin/data/bank/bulk/upload_data',
+//         type: 'POST',
+//         dataType: 'json',
+//         data: {
+//                 medium: '{{ $camp }}',
+//             },
+//         success: function(response)
+//         {
+//             $("#overlay").fadeOut(300);
+//             // setTimeout(function(){
+//             //     $("#overlay").fadeOut(300);
+//             //   },5000);
+//         }
+//         });
 // }
+
 </script>
 @endsection

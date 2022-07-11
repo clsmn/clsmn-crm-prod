@@ -1,3 +1,4 @@
+
     <div class="row">
         <div class="col-sm-6">
             <div class="box">
@@ -9,11 +10,30 @@
                     <dl class="dl-horizontal lead-detail">
                         <dt>Last Call</dt>
                         <dd>
-                            {{ ($lead->last_call != NULL)? $lead->last_call->format(config('access.date_time_format')) : NULL }}
+                                @if(Auth::user()->roles[0]->name == 'Administrator' || Auth::user()->roles[0]->name == 'Manager')
+                                    {{ ($lead->last_call != NULL)? $lead->last_call->format(config('access.date_time_format')) : NULL }}
+                                @else
+                                    @if($lead->data_medium == 'FBL_REM_MS')
+                                        @if($total_history_count == $total_history_no_answer_count)
+                                            @if($lead->last_call >= $lead->assigned_at)
+                                                {{ ($lead->last_call != NULL)? $lead->last_call->format(config('access.date_time_format')) : NULL }}
+                                            @endif
+                                        @else
+                                            {{ ($lead->last_call != NULL)? $lead->last_call->format(config('access.date_time_format')) : NULL }}
+                                        @endif
+                                    @else
+                                        {{ ($lead->last_call != NULL)? $lead->last_call->format(config('access.date_time_format')) : NULL }}
+                                    @endif
+                                @endif
+                           
                         </dd>
                         <dt>Next Follow up</dt>
                         <dd>
-                            {{ ($lead->next_follow_up != NULL)? $lead->next_follow_up->format(config('access.date_time_format')) : NULL }}
+                                @if(Auth::user()->roles[0]->name == 'Administrator' || Auth::user()->roles[0]->name == 'Manager')
+                                 {{ ($lead->next_follow_up != NULL)? $lead->next_follow_up->format(config('access.date_time_format')) : NULL }}
+                                @else
+                                @endif
+                          
                         </dd>
                         <dt>Address</dt>
                         <dd>
@@ -42,6 +62,7 @@
                                 User is not on platform.
                             @endif
                         </dd>
+                        <dt>Data</dt>
                     </dl>
                 </div>
                 <!-- /.box-body -->
@@ -56,6 +77,7 @@
                         <tbody>
                         <tr>
                             <th style="width:60px;">Primary</th>
+                            <th>CC</th>
                             <th>Phone No.</th>
                             <th>Name</th>
                             <th>Relation</th>
@@ -67,6 +89,7 @@
                                     <i class="fa fa-check-circle-o"></i>
                                 </span>
                             </td>
+                            <td>{{ $lead->country_code }}</td>
                             <td>{{ $lead->phone }}</td>
                             <td id="lead_name-{{ $lead->id }}">
                                 <span class="lead-value-{{ $lead->id }}">{{ $lead->name }}</span>
@@ -86,37 +109,40 @@
                                 </span>
                             </td>
                         </tr>
-                        @if($lead->alternateNumbers()->count() > 0)
-                            @foreach($lead->alternateNumbers as $row)
-                            <tr>
-                                <td class="{{ ($row->preferred == '1')? 'text-green' : '' }} primary-number">
-                                    <span data-type="alternate" data-val="{{ $row->id}}" data-lead="{{ $row->lead_id}}">
-                                        <i class="fa fa-check-circle-o"></i>
-                                    </span>
-                                </td>
-                                <td>{{ $row->phone }}</td>
-                                <td id="number_name-{{ $row->id }}">
-                                    <span class="row-value-{{ $row->id }}">{{ $row->name }}</span>
-                                    <input type="text" value="{{ $row->name }}" class="form-control input-sm hide edit-row-{{ $row->id }}">
-                                </td>
-                                <td id="number_relation-{{ $row->id }}">
-                                    <span class="row-value-{{ $row->id }}">{{ $row->relation }}</span>
-                                    <input type="text" value="{{ $row->relation }}" class="form-control input-sm hide edit-row-{{ $row->id }}">
-                                </td>
-                                <td>
-                                    <span class="row-value-{{ $row->id }}">
-                                        <button class="btn btn-xs btn-primary editNumber" data-val="{{ $row->id }}"><i class="fa fa-pencil"></i></button>
-                                        <button class="btn btn-xs btn-danger" data-toggle="an-confirmation" data-value="{{ $row->id }}" data-singleton="true">
-                                            <i class="fa fa-trash"></i>
-                                        </button>
-                                    </span>
-                                    <span class="hide edit-row-{{ $row->id }}">
-                                        <button class="btn btn-xs btn-success saveNumber" data-val="{{ $row->id }}"><i class="fa fa-check"></i></button>
-                                        <button class="btn btn-xs btn-danger cancelEditNumber" data-val="{{ $row->id }}"><i class="fa fa-times"></i></button>
-                                    </span>
-                                </td>
-                            </tr>
-                            @endforeach
+                        @if($lead->last_call >= $lead->assigned_at)
+                            @if($lead->alternateNumbers()->count() > 0)
+                                @foreach($lead->alternateNumbers as $row)
+                                <tr>
+                                    <td class="{{ ($row->preferred == '1')? 'text-green' : '' }} primary-number">
+                                        <span data-type="alternate" data-val="{{ $row->id}}" data-lead="{{ $row->lead_id}}">
+                                            <i class="fa fa-check-circle-o"></i>
+                                        </span>
+                                    </td>
+                                    <td>{{ $row->country_code }}</td>
+                                    <td>{{ $row->phone }}</td>
+                                    <td id="number_name-{{ $row->id }}">
+                                        <span class="row-value-{{ $row->id }}">{{ $row->name }}</span>
+                                        <input type="text" value="{{ $row->name }}" class="form-control input-sm hide edit-row-{{ $row->id }}">
+                                    </td>
+                                    <td id="number_relation-{{ $row->id }}">
+                                        <span class="row-value-{{ $row->id }}">{{ $row->relation }}</span>
+                                        <input type="text" value="{{ $row->relation }}" class="form-control input-sm hide edit-row-{{ $row->id }}">
+                                    </td>
+                                    <td>
+                                        <span class="row-value-{{ $row->id }}">
+                                            <button class="btn btn-xs btn-primary editNumber" data-val="{{ $row->id }}"><i class="fa fa-pencil"></i></button>
+                                            <button class="btn btn-xs btn-danger" data-toggle="an-confirmation" data-value="{{ $row->id }}" data-singleton="true">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
+                                        </span>
+                                        <span class="hide edit-row-{{ $row->id }}">
+                                            <button class="btn btn-xs btn-success saveNumber" data-val="{{ $row->id }}"><i class="fa fa-check"></i></button>
+                                            <button class="btn btn-xs btn-danger cancelEditNumber" data-val="{{ $row->id }}"><i class="fa fa-times"></i></button>
+                                        </span>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            @endif
                         @endif
                         </tbody>
                     </table>
@@ -169,60 +195,118 @@
                 <th>Age</th>
                 <th>Class</th>
             </tr>
-            @if($children)
-                @foreach($children as $child)
-                <tr>
-                    <td id="child_name-{{ $child->id }}">
-                        <span class="child-value-{{ $child->id }}">{{ $child->name }}</span>
-                        <input type="text" value="{{ $child->name }}" class="form-control input-sm hide edit-child-{{ $child->id }}">
-                    </td>
-                    <td id="child_gender-{{ $child->id }}">
-                        <span class="child-value-{{ $child->id }}">{{ $child->gender }}</span>
-                        <select class="form-control input-sm hide edit-child-{{ $child->id }}">
-                            <option value="">Select Gender</option>
-                            <option value="BOY" {!! ($child->gender == 'BOY')? 'selected="selected"' : '' !!}>Boy</option>
-                            <option value="GIRL" {!! ($child->gender == 'GIRL')? 'selected="selected"' : '' !!}>Girl</option>
-                        </select>
-                    </td>
-                    <td id="child_dob-{{ $child->id }}">
-                        <span class="child-value-{{ $child->id }}">
-                            @php
-                            $age = \Carbon\Carbon::parse($child->dob)->age;    
-                            @endphp
-                            {{ ($age != null && $age != 0)? $age.' '.trans_choice('strings.backend.general.years', $age): NULL }}
-                        </span>
-                        {{-- <input type="text" value="{{ ($child->dob !=null)? $child->dob->format('d/m/Y') : NULL }}" class="form-control input-sm datemask hide edit-child-{{ $child->id }}" data-inputmask="'alias': 'dd/mm/yyyy'" data-mask> --}}
-                    </td>
-                    <td id="child_class-{{ $child->id }}">
-                        <span class="child-value-{{ $child->id }}">{{ getClassGradeName($child->child_class_id) }}</span>
-                        <select class="form-control input-sm hide edit-child-{{ $child->id }}">
-                            <option value="1" {!! ($child->child_class_id == '1')? 'selected="selected"':'' !!}>Play Group</option>
-                            <option value="2" {!! ($child->child_class_id == '2')? 'selected="selected"':'' !!}>Nursery</option>
-                            <option value="3" {!! ($child->child_class_id == '3')? 'selected="selected"':'' !!}>Lower/Junior KG</option>
-                            <option value="4" {!! ($child->child_class_id == '4')? 'selected="selected"':'' !!}>Upper/Senior KG</option>
-                            <option value="18" {!! ($child->child_class_id == '18')? 'selected="selected"':'' !!}>Home Taught</option>
-                        </select>
-                    </td>
-                    {{-- <td>{{ ucfirst($child->data_medium) }}</td>
-                    <td id="child_school-{{ $child->id }}">
-                        <span class="child-value-{{ $child->id }}">{{ $child->school_name }}</span>
-                        <input type="text" value="{{ $child->school_name }}" class="form-control input-sm hide edit-child-{{ $child->id }}">
-                    </td>
-                    <td>{{ ($child->added_on != NULL)? $child->added_on->format(config('access.date_format')) : NULL }}</td>
-                    <td>
-                        <span class="child-value-{{ $child->id }}">
-                            <button class="btn btn-xs btn-primary editChid" data-val="{{ $child->id }}"><i class="fa fa-pencil"></i></button>
-                            <button class="btn btn-xs btn-danger" data-toggle="confirmation" data-value="{{ $child->id }}" data-singleton="true">
-                                <i class="fa fa-trash"></i>
-                            </button>
-                        </span>
-                        <span class="hide edit-child-{{ $child->id }}">
-                            <button class="btn btn-xs btn-success saveChild" data-val="{{ $child->id }}"><i class="fa fa-check"></i></button>
-                            <button class="btn btn-xs btn-danger cancelEditChild" data-val="{{ $child->id }}"><i class="fa fa-times"></i></button>
-                        </span>
-                    </td> --}}
-                </tr>
-                @endforeach
+            @if($lead->last_call >= $lead->assigned_at)
+                @if($children)
+                    @foreach($children as $child)
+                    <tr>
+                        <td id="child_name-{{ $child->id }}">
+                            <span class="child-value-{{ $child->id }}">{{ $child->name }}</span>
+                            <input type="text" value="{{ $child->name }}" class="form-control input-sm hide edit-child-{{ $child->id }}">
+                        </td>
+                        <td id="child_gender-{{ $child->id }}">
+                            <span class="child-value-{{ $child->id }}">{{ $child->gender }}</span>
+                            <select class="form-control input-sm hide edit-child-{{ $child->id }}">
+                                <option value="">Select Gender</option>
+                                <option value="BOY" {!! ($child->gender == 'BOY')? 'selected="selected"' : '' !!}>Boy</option>
+                                <option value="GIRL" {!! ($child->gender == 'GIRL')? 'selected="selected"' : '' !!}>Girl</option>
+                            </select>
+                        </td>
+                        <td id="child_dob-{{ $child->id }}">
+                            <span class="child-value-{{ $child->id }}">
+                                @php
+                                $age = \Carbon\Carbon::parse($child->dob)->age;    
+                                @endphp
+                                {{ ($age != null && $age != 0)? $age.' '.trans_choice('strings.backend.general.years', $age): NULL }}
+                            </span>
+                            {{-- <input type="text" value="{{ ($child->dob !=null)? $child->dob->format('d/m/Y') : NULL }}" class="form-control input-sm datemask hide edit-child-{{ $child->id }}" data-inputmask="'alias': 'dd/mm/yyyy'" data-mask> --}}
+                        </td>
+                        <td id="child_class-{{ $child->id }}">
+                            <span class="child-value-{{ $child->id }}">{{ getClassGradeName($child->child_class_id) }}</span>
+                            <select class="form-control input-sm hide edit-child-{{ $child->id }}">
+                                <option value="1" {!! ($child->child_class_id == '1')? 'selected="selected"':'' !!}>Play Group</option>
+                                <option value="2" {!! ($child->child_class_id == '2')? 'selected="selected"':'' !!}>Nursery</option>
+                                <option value="3" {!! ($child->child_class_id == '3')? 'selected="selected"':'' !!}>Lower/Junior KG</option>
+                                <option value="4" {!! ($child->child_class_id == '4')? 'selected="selected"':'' !!}>Upper/Senior KG</option>
+                                <option value="18" {!! ($child->child_class_id == '18')? 'selected="selected"':'' !!}>Home Taught</option>
+                            </select>
+                        </td>
+                        <td>{{ ucfirst($child->data_medium) }}</td>
+                        <td id="child_school-{{ $child->id }}">
+                            <span class="child-value-{{ $child->id }}">{{ $child->school_name }}</span>
+                            <input type="text" value="{{ $child->school_name }}" class="form-control input-sm hide edit-child-{{ $child->id }}">
+                        </td>
+                        <td>{{ ($child->added_on != NULL)? $child->added_on->format(config('access.date_format')) : NULL }}</td>
+                        <td>
+                            <span class="child-value-{{ $child->id }}">
+                                <button class="btn btn-xs btn-primary editChid" data-val="{{ $child->id }}"><i class="fa fa-pencil"></i></button>
+                                <button class="btn btn-xs btn-danger" data-toggle="confirmation" data-value="{{ $child->id }}" data-singleton="true">
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                            </span>
+                            <span class="hide edit-child-{{ $child->id }}">
+                                <button class="btn btn-xs btn-success saveChild" data-val="{{ $child->id }}"><i class="fa fa-check"></i></button>
+                                <button class="btn btn-xs btn-danger cancelEditChild" data-val="{{ $child->id }}"><i class="fa fa-times"></i></button>
+                            </span>
+                        </td> 
+                    </tr>
+                    @endforeach
+                @endif
+            @else
+                @if($children)
+                    @foreach($children as $child)
+                    <tr>
+                        <td id="child_name-{{ $child->id }}">
+                            <span class="child-value-{{ $child->id }}">{{ $child->name }}</span>
+                            <input type="text" value="{{ $child->name }}" class="form-control input-sm hide edit-child-{{ $child->id }}">
+                        </td>
+                        <td id="child_gender-{{ $child->id }}">
+                            <span class="child-value-{{ $child->id }}">{{ $child->gender }}</span>
+                            <select class="form-control input-sm hide edit-child-{{ $child->id }}">
+                                <option value="">Select Gender</option>
+                                <option value="BOY" {!! ($child->gender == 'BOY')? 'selected="selected"' : '' !!}>Boy</option>
+                                <option value="GIRL" {!! ($child->gender == 'GIRL')? 'selected="selected"' : '' !!}>Girl</option>
+                            </select>
+                        </td>
+                        <td id="child_dob-{{ $child->id }}">
+                            <span class="child-value-{{ $child->id }}">
+                                @php
+                                $age = \Carbon\Carbon::parse($child->dob)->age;    
+                                @endphp
+                                {{ ($age != null && $age != 0)? $age.' '.trans_choice('strings.backend.general.years', $age): NULL }}
+                            </span>
+                            {{-- <input type="text" value="{{ ($child->dob !=null)? $child->dob->format('d/m/Y') : NULL }}" class="form-control input-sm datemask hide edit-child-{{ $child->id }}" data-inputmask="'alias': 'dd/mm/yyyy'" data-mask> --}}
+                        </td>
+                        <td id="child_class-{{ $child->id }}">
+                            <span class="child-value-{{ $child->id }}">{{ getClassGradeName($child->child_class_id) }}</span>
+                            <select class="form-control input-sm hide edit-child-{{ $child->id }}">
+                                <option value="1" {!! ($child->child_class_id == '1')? 'selected="selected"':'' !!}>Play Group</option>
+                                <option value="2" {!! ($child->child_class_id == '2')? 'selected="selected"':'' !!}>Nursery</option>
+                                <option value="3" {!! ($child->child_class_id == '3')? 'selected="selected"':'' !!}>Lower/Junior KG</option>
+                                <option value="4" {!! ($child->child_class_id == '4')? 'selected="selected"':'' !!}>Upper/Senior KG</option>
+                                <option value="18" {!! ($child->child_class_id == '18')? 'selected="selected"':'' !!}>Home Taught</option>
+                            </select>
+                        </td>
+                        <td>{{ ucfirst($child->data_medium) }}</td>
+                        <td id="child_school-{{ $child->id }}">
+                            <span class="child-value-{{ $child->id }}">{{ $child->school_name }}</span>
+                            <input type="text" value="{{ $child->school_name }}" class="form-control input-sm hide edit-child-{{ $child->id }}">
+                        </td>
+                        <td>{{ ($child->added_on != NULL)? $child->added_on->format(config('access.date_format')) : NULL }}</td>
+                        <td>
+                            <span class="child-value-{{ $child->id }}">
+                                <button class="btn btn-xs btn-primary editChid" data-val="{{ $child->id }}"><i class="fa fa-pencil"></i></button>
+                                <button class="btn btn-xs btn-danger" data-toggle="confirmation" data-value="{{ $child->id }}" data-singleton="true">
+                                    <i class="fa fa-trash"></i>
+                                </button>
+                            </span>
+                            <span class="hide edit-child-{{ $child->id }}">
+                                <button class="btn btn-xs btn-success saveChild" data-val="{{ $child->id }}"><i class="fa fa-check"></i></button>
+                                <button class="btn btn-xs btn-danger cancelEditChild" data-val="{{ $child->id }}"><i class="fa fa-times"></i></button>
+                            </span>
+                        </td> 
+                    </tr>
+                    @endforeach
+                @endif
             @endif
             <tr id="addChildTr" class="hide">
                 <td>
@@ -301,32 +385,53 @@
             <div class="text-center {{ ($lead->learning == '0' && $lead->learning_id == '0')? '': 'hide'}}">
                 <button class="btn btn-success" id="activateLearning" data-val="{{ $lead->id }}">Activate Learning</button>
             </div>
+            @if($lead->last_call >= $lead->assigned_at)
             <table class="table table-condensed table-bordered {{ (($lead->learning == '0' && $lead->learning_id == '0') || $subscriptions->count() == '0')? 'hide': ''}}" id="subscriptionTable">
             <tbody>
             <tr>
                 <th>Subscription</th>
                 <th>Type</th>
-                <th>Physical</th>
                 <th>Child</th>
-                <th>Class</th>
                 <th>Date</th>
-                <th>Activity Check</th>
+                <th>Status</th>
             </tr>
             @if($subscriptions->count() != 0)
                 @foreach($subscriptions as $subscription)
                     <tr>
                         <td>{{ $subscription->package_name }}</td>
                         <td>{{ $subscription->subscription_type }}</td>
-                        <td>{{ ($subscription->package_addons_id == '0')? 'No': 'Yes' }}</td>
                         <td>{{ $subscription->child_name }}</td>
-                        <td>{{ getClassGradeName($subscription->child_class) }}</td>
                         <td>{{ date(config('access.date_format'), strtotime($subscription->created_at))}}</td>
-                        <td>Check</td>
+                        <td style="color: {{ $subscription->subscription_status == 'ACTIVE' ? 'green' : 'red'  }}">{{ $subscription->subscription_status }}</td>
                     </tr>
                 @endforeach
             @endif
             </tbody>
             </table>
+            @else
+            <table class="table table-condensed table-bordered {{ (($lead->learning == '0' && $lead->learning_id == '0') || $subscriptions->count() == '0')? 'hide': ''}}" id="subscriptionTable">
+            <tbody>
+            <tr>
+                <th>Subscription</th>
+                <th>Type</th>
+                <th>Child</th>
+                <th>Date</th>
+                <th>Status</th>
+            </tr>
+            @if($subscriptions->count() != 0)
+                @foreach($subscriptions as $subscription)
+                    <tr>
+                        <td>{{ $subscription->package_name }}</td>
+                        <td>{{ $subscription->subscription_type }}</td>
+                        <td>{{ $subscription->child_name }}</td>
+                        <td>{{ date(config('access.date_format'), strtotime($subscription->created_at))}}</td>
+                        <td style="color: {{ $subscription->subscription_status == 'ACTIVE' ? 'green' : 'red'  }}">{{ $subscription->subscription_status }}</td>
+                    </tr>
+                @endforeach
+            @endif
+            </tbody>
+            </table>
+            @endif
             <br>
 
         <a href="javascript:void(0)" id="startFreeTrialToggle" class="btn btn-success {{ ($lead->learning == '0' && $lead->learning_id == '0')? 'hide': ''}}">Start Free Trial</a>
@@ -384,7 +489,9 @@
             <h3 class="box-title">Lead History</h3>
         </div>
         <div class="box-body" id="historyBox">
-            {!! history()->renderEntity('Lead', $lead->id, null, false) !!}
+          
+                        {!! history()->renderEntity('Lead', $lead->id, null, false) !!}
+              
         </div>
     </div>
 
@@ -406,13 +513,12 @@
                         <div class="col-md-2">
                             <button class="btn btn-success btn-block callLead" data-val="{{ $lead->id }}">Call Lead</button>
                         </div>
-                        @if($user->phone != NULL && $user->phone != '')
+                        @if($user->office24by_username != NULL && $user->office24by_username != '')
                         <div class="col-md-2">
                             <button class="btn btn-warning btn-block cloudCallLead" data-val="{{ $lead->id }}">Cloud Call</button>
                         </div>
                         @endif
                     @endif
-                   
                 </div>
                 <div id="cloudCallStatus"></div>
                 <div id="leadActionMessage"></div>
@@ -445,11 +551,13 @@
                         <dt>Call Agenda</dt>
                         <dd>
                             <button class="callAgenda btn btn-lg mar20r" data-val="training"=>TRAINING</button>
+                            @if(Auth::id() != 140)
                             <button class="callAgenda btn btn-lg" data-val="sale">SALES</button>
+                            @endif
                             <input type="hidden" id="callAgenda">
                             <div class="error"></div>
                         </dd>
-                        <dt>Lead Stage</dt>
+                        <!-- <dt>Lead Stage</dt>
                         <dd>
                             <input type="hidden" id="leadStage">
                             <table class="table table-condensed lead-stage">
@@ -463,17 +571,23 @@
                                 </tbody>
                             </table>
                             <div class="alert alert-warning leadStageMessage hide"></div>
-                        </dd>
+                        </dd> -->
                         <dt>Lead Status</dt>
                         <dd>
-                            <button class="leadStatus btn btn-lg mar20r" data-val="sale">SALE</button>
-                            <button class="leadStatus btn btn-lg mar20r" data-val="hot">HOT</button>
-                            <button class="leadStatus btn btn-lg mar20r" data-val="mild">MILD</button>
-                            <button class="leadStatus btn btn-lg mar20r" data-val="cold">COLD</button>
-                            <button class="leadStatus btn btn-lg mar20r" data-val="no_answer">NO ANSWER</button>
-                            <button class="leadStatus btn btn-lg mar20r" data-val="busy">BUSY</button>
-                            <button class="leadStatus btn btn-lg mar20r" data-val="not_interested">NOT INTERESTED</button>
-                            <button class="leadStatus btn btn-lg" data-val="dead">DEAD</button>
+                            @if(Auth::id() != 140)
+                            <button class="leadStatus btn btn-lg mar20r mt-5" data-val="sale">SALE</button>
+                            <button class="leadStatus btn btn-lg mar20r mt-5" data-val="already_sale">ALREADY SALE</button>
+                            <button class="leadStatus btn btn-lg mar20r mt-5" data-val="hot">HOT</button>
+                            <button class="leadStatus btn btn-lg mar20r mt-5" data-val="mild">MILD</button>
+                            <button class="leadStatus btn btn-lg mar20r mt-5" data-val="cold">COLD</button>
+                            <button class="leadStatus btn btn-lg mar20r mt-5" data-val="no_answer">NO ANSWER</button>
+                            <button class="leadStatus btn btn-lg mar20r mt-5" data-val="busy">BUSY</button>
+                            <button class="leadStatus btn btn-lg mar20r mt-5" data-val="not_interested">NOT INTERESTED</button>
+                            <button class="leadStatus btn btn-lg mt-5"  data-val="dead">DEAD</button>
+                            @endif
+                            <button class="leadStatus btn btn-lg mt-5" data-val="feedback">FEEDBACK</button>
+                            <button class="leadStatus btn btn-lg mt-5" data-val="reference">REFERENCE</button>
+                            <button class="leadStatus btn btn-lg mt-5" data-val="guidence">GUIDENCE</button>
 
                             {{-- <div class="btn-group pull-right">
                                 <button type="button" class="leadStatusDead btn btn-lg">DEAD</button>

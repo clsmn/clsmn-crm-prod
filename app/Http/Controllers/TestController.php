@@ -16,6 +16,10 @@ class TestController extends Controller
 
     public function index()
     {
+        dd('ytttt');
+        // phpinfo();
+        // die;
+
         try {
             $number = PhoneNumber::parse('9074251626');
             echo $number->getRegionCode().'-'; // GB
@@ -440,5 +444,139 @@ class TestController extends Controller
                     ->update(['updated_at' => $row->created_at, 'phase_updated' => '2']);
         }
         dd('done');
+    }
+
+    function noAnswerExport()
+    {
+        $fileName = 'JAN_PU.csv';
+        $leads = Lead::where('lead_status', 'no_answer')->where(function($query){
+            $query->where('data_medium', 'JAN_PU');
+            // $query->orWhere('data_medium', 'La_n_q2');
+        })
+        ->select([
+            'id',
+            'data_user_id',
+        ])
+        ->get();
+
+        $headers = array(
+            "Content-type"        => "text/csv",
+            "Content-Disposition" => "attachment; filename=$fileName",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
+        );
+
+        $columns = array('name', 'country_code', 'phone', 'city');
+
+        $callback = function() use($leads, $columns) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $columns);
+
+            foreach ($leads as $lead) {
+                //check for no answer count
+                $totalCalls = $lead->calls()->where('saved', '1')->count();
+                $totalNoAnswerCalls = $lead->calls()->where('saved', '1')->where(function($query) {
+                    $query->where('lead_status', 'no_answer');
+                    // $query->orWhere('lead_status', 'hot');
+                })->count();
+
+                if($totalCalls == $totalNoAnswerCalls) {
+                    $dataUser  = DataUser::findOrFail($lead->data_user_id);
+
+                    $row['name']            = $dataUser->name;
+                    $row['country_code']    = $dataUser->country_code;
+                    $row['phone']           = $dataUser->phone;
+                    $row['city']            = $dataUser->city;
+
+                    fputcsv($file, array($row['name'], $row['country_code'], $row['phone'], $row['city']));
+                }
+                
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+
+    function webhookLead()
+    {
+        if(isset($_REQUEST['hub_verify_token'])) {
+            $challenge = $_REQUEST['hub_challenge'];
+            $verify_token = $_REQUEST['hub_verify_token'];
+
+            if ($verify_token === 'abc123') {
+                echo $challenge;
+            }
+        }
+
+        $input = json_decode(file_get_contents('php://input'), true);
+
+        $webhookURL = 'https://chat.googleapis.com/v1/spaces/AAAAl0HmcSU/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=8Awdlmcm58vWp2ZPcz1HPjuxypS1WVvtNigQVqTY1yM%3D';
+        Curl::to($webhookURL)
+            ->withData( array( 'text' => json_encode($input) ) )
+            ->asJson()
+            ->post();
+        // $input = json_decode(file_get_contents('php://input'), true);
+        error_log(print_r($input, true));
+
+        // return http_response_code(200);
+    }
+
+    function callHistoryClone()
+    {
+
+        $query = DB::table('leads as l')
+                        ->leftJoin('call_history_data', 'call_history_data.id', 'l.last_call_id')
+                        ->leftJoin('users as u1', 'u1.id', 'call_history_data.called_by')
+                        ->leftJoin('users as u2', 'u2.id', 'l.assigned_to')
+                        ->select(['l.id as lead_id', 'l.data_user_id', 'l.country_code', 'l.phone', 'l.name', 'l.data_medium', 'l.last_call', 'l.next_follow_up', 'l.lead_status', 'l.assigned_to', 
+                        'call_history_data.id', 'call_history_data.exotel_sid','call_history_data.duration', 'call_history_data.call_record_file', 'call_history_data.called_by', 'call_history_data.created_at',
+                        'u1.name as called_by_name', 'u2.name as assigned_to_name', 'l.frequency']);
+
+        $query->orderBy(config('access.call_history_data_table').'.created_at','DESC');
+
+        $ss =$query->count();
+                        
+        dd($ss);
+        // $query = CallHistory::where(config('access.call_history_table').'.saved', '1');
+        // $query->whereIn(config('access.call_history_table').'.id', function($q){
+        //     $q->select(DB::raw('MAX(id) FROM '.config('access.call_history_table').' WHERE saved="1" GROUP BY lead_id'));
+        // });
+        // $query->groupBy(config('access.call_history_table').'.lead_id');
+        // $query->orderBy(config('access.call_history_table').'.created_at', 'DESC');
+
+        // $Oldleads = $query->get();
+        // $i = 1;
+        // foreach($Oldleads as $callHistory)
+        // {
+        //     $values = array(
+        //             'lead_id' => $callHistory->lead_id,
+        //             'country_code' => $callHistory->country_code,
+        //             'phone' => $callHistory->phone,
+        //             'called_by' => $callHistory->called_by,
+        //             'duration' => $callHistory->duration,
+        //             'call_type' => $callHistory->call_type,
+        //             'call_record_file' => $callHistory->call_record_file,
+        //             'note' => $callHistory->note,
+        //             'lead_status' => $callHistory->lead_status,
+        //             'schedule_address' => $callHistory->schedule_address,
+        //             'schedule_time' => $callHistory->schedule_time,
+        //             'next_follow_up' => $callHistory->next_follow_up,
+        //             'type' => $callHistory->type,
+        //             'saved' => $callHistory->saved,
+        //             'created_at' => $callHistory->created_at,
+        //             'updated_at' => $callHistory->updated_at,
+        //             'exotel_sid' => $callHistory->exotel_sid,
+        //             'exotel_call_status' => $callHistory->exotel_call_status,
+        //             'data_medium' => $callHistory->data_medium,
+        //         );
+        //         DB::table('call_history_data')->insert($values);
+        //     echo $i.'. Done: '.$callHistory->id.'</br>';
+        //     $i++;
+
+        // }
     }
 }

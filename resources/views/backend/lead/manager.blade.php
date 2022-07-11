@@ -61,7 +61,7 @@
                     </select>
                     <div id="datePicker1" style="background: #fff; cursor: pointer; padding: 5px 10px; border: 1px solid #ccc; width: 310px;">
                         <i class="fa fa-calendar"></i>&nbsp;
-                        <span>Select Date Range</span> <i class="fa fa-caret-down"></i>
+                        <span>@php echo date('F d, Y', strtotime('-30 days')).' - '.date('F d, Y') @endphp</span> <i class="fa fa-caret-down"></i>
                     </div>
                     <table id="called-list-table" class="table table-condensed table-hover">
                         <thead>
@@ -354,6 +354,8 @@
             locale: {
                 cancelLabel: 'Clear'
             },
+            startDate: moment().subtract(29, 'days'),
+            endDate: moment(),
             opens: 'left',
             ranges: {
             'Today': [moment(), moment()],

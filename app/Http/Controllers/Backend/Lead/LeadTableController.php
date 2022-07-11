@@ -7,7 +7,9 @@ use App\Models\Access\User\User;
 use App\Http\Controllers\Controller;
 use Yajra\Datatables\Facades\Datatables;
 use App\Repositories\Backend\Lead\LeadRepository;
-
+use Illuminate\Support\Facades\DB;
+use App\Models\Lead\Lead;
+use Auth;
 /**
  * Class LeadTableController.
  */
@@ -33,8 +35,11 @@ class LeadTableController extends Controller
      */
     public function callList(Request $request)
     {
-        return Datatables::of($this->leads->getForDataTable($request, '0'))
+        if(Auth::user()->roles[0]->name == 'Administrator' || Auth::user()->roles[0]->name == 'Manager')
+        {
+            return Datatables::of($this->leads->getForDataTable($request, '0'))
             ->editColumn('lead_status', function ($lead) {
+                
                 return '<button class="btn '.$lead->status_class.' btn-sm">'.leadStatus($lead->lead_status).'</button>';
             })
             ->editColumn('last_call', function ($lead) {
@@ -57,6 +62,87 @@ class LeadTableController extends Controller
             })
             ->rawColumns(['lead_status'])
             ->make(true);
+        }
+        else
+        {
+           
+            return Datatables::of($this->leads->getForDataTable($request, '0'))
+                ->editColumn('lead_status', function ($lead) {
+                    if($lead->data_medium == 'FBL_REM_MS')
+                        return '<button class="btn '.($lead->lead_status == 'no_answer' ? '' : $lead->status_class).' btn-sm">'.leadStatus(($lead->lead_status == 'no_answer' ? 'OPEN' : $lead->lead_status)).'</button>';
+                    else
+                        return '<button class="btn '.$lead->status_class.' btn-sm">'.leadStatus($lead->lead_status).'</button>';
+                })
+                ->editColumn('last_call', function ($lead) {
+                     $total_history_count = DB::table('call_history')->select('id')->where('lead_id',$lead->id)->where('data_medium','FBL_REM_MS')->count();
+
+                    $total_history_no_answer_count = DB::table('call_history')->select('id')->where('lead_id',$lead->id)->where('lead_status','no_answer')->where('data_medium','FBL_REM_MS')->count();
+                    if(Auth::user()->roles[0]->name == 'Administrator' || Auth::user()->roles[0]->name == 'Manager')
+                    {
+                        return ($lead->last_call != null)? $lead->last_call->format(config('access.date_time_format')) : '';
+                    }
+                    else
+                    {
+                        if($lead->data_medium == 'FBL_REM_MS')
+                        {
+                            if($total_history_count == $total_history_no_answer_count)
+                            {
+                                return ($lead->last_call != null)? '' : '';
+                            }
+                            else
+                            {
+                                return ($lead->last_call != null)? $lead->last_call->format(config('access.date_time_format')) : '';
+                            }
+                        }
+                        else
+                        {
+                            return ($lead->last_call != null)? $lead->last_call->format(config('access.date_time_format')) : '';
+                        }
+                    }
+                })
+                ->editColumn('phase', function ($row) {
+                    if($row->phase == 'buy_attempt')
+                        return 'Buy Attempt';
+                    else if($row->phase == 'cart')
+                        return 'Cart Abandon';
+                    else if($row->phase == 'trial')
+                        return 'Trial Started';
+                    else if($row->phase == 'kit_purchased')
+                        return 'Kit Purchased';
+                    else
+                        return '';
+                })
+                ->editColumn('next_follow_up', function ($lead) {
+                     $total_history_count = DB::table('call_history')->select('id')->where('lead_id',$lead->id)->where('data_medium','FBL_REM_MS')->count();
+
+                     $total_history_no_answer_count = DB::table('call_history')->select('id')->where('lead_id',$lead->id)->where('lead_status','no_answer')->where('data_medium','FBL_REM_MS')->count();
+                    
+                    if(Auth::user()->roles[0]->name == 'Administrator' || Auth::user()->roles[0]->name == 'Manager')
+                    {
+                        return ($lead->next_follow_up != null)? $lead->next_follow_up->format(config('access.date_time_format')) : '';
+                    }
+                    else
+                    {
+                        if($lead->data_medium == 'FBL_REM_MS')
+                        {
+                            if($total_history_count == $total_history_no_answer_count)
+                            {
+                                return ($lead->next_follow_up != null)? '' : '';
+                            }
+                            else
+                            {
+                                return ($lead->next_follow_up != null)? $lead->next_follow_up->format(config('access.date_time_format')) : '';
+                            }
+                        }
+                        else
+                        {
+                            return ($lead->next_follow_up != null)? $lead->next_follow_up->format(config('access.date_time_format')) : '';
+                        }
+                    }
+                })
+                ->rawColumns(['lead_status'])
+                ->make(true);
+         }
     }
 
     /**
@@ -175,7 +261,53 @@ class LeadTableController extends Controller
      */
     public function calledList(Request $request)
     {
+      
         return Datatables::of($this->leads->getCallHistoryForDataTable($request))
+            ->editColumn('lead_status', function ($call) {
+                $html = '<button class="btn btn-xs">'.leadStatus($call->lead_lead_status).'</button>';
+                return $html;
+            })
+            ->editColumn('name', function ($call) {
+                return $call->lead_name;
+            })
+            ->editColumn('lead_id', function ($call) {
+                return $call->lead_id;
+            })
+            ->addColumn('call_duration', function ($call) {
+                $html = '';
+                // if(isset($call->exotel_sid) && $call->exotel_sid != null && $call->exotel_sid != ''){
+                //     $html .= duration($call->duration, true);
+                //     if($call->call_record_file != null)
+                //     {
+                //         $html .= '<audio id="audio-'.$call->id.'" src="'.$call->call_record_file.'" class="hide"></audio>';
+                //         $html .= '&nbsp; &nbsp;<button class="btn btn-success btn-xs recordPlay" data-val="'.$call->id.'">Play</button>';
+                //     }
+                // }else if($call->call_record_file != null)
+                // {
+                //     $html .= duration($call->duration);
+                //     $html .= '<audio id="audio-'.$call->id.'" src="'.url('storage/call_records/'.$call->call_record_file).'" class="hide"></audio>';
+                //     $html .= '&nbsp; &nbsp;<button class="btn btn-success btn-xs recordPlay" data-val="'.$call->id.'">Play</button>';
+                // }else{
+                    $html .= duration($call->duration);
+                // }
+                
+                return $html;
+            })
+            ->addColumn('called_at', function ($call) {
+                // return ($call->created_at != null)? $call->created_at->format(config('access.date_time_format')) : '';
+                return ($call->created_at != null)? date(config('access.date_time_format'), strtotime($call->created_at)) : '';
+            })
+            ->editColumn('next_follow_up', function ($call) {
+                // return ($call->next_follow_up != null)? $call->next_follow_up->format(config('access.date_time_format')) : '';
+                return ($call->next_follow_up != null)? date(config('access.date_time_format'), strtotime($call->next_follow_up)) : '';
+            })
+            ->rawColumns(['lead_status', 'call_duration'])
+            ->make(true);
+    }
+
+      public function calledincomingList(Request $request)
+    {
+        return Datatables::of($this->leads->getCallIncomingHistoryForDataTable($request))
             ->editColumn('lead_status', function ($call) {
                 $html = '<button class="btn '.$call->lead->status_class.' btn-xs">'.leadStatus($call->lead_status).'</button>';
                 return $html;
@@ -216,7 +348,6 @@ class LeadTableController extends Controller
             ->rawColumns(['lead_status', 'call_duration'])
             ->make(true);
     }
-
     /**
      * @param Request $request
      *
@@ -319,4 +450,63 @@ class LeadTableController extends Controller
             ->rawColumns(['lead_status', 'action'])
             ->make(true);
     }
+
+
+      public function getAssignedlead(Request $request)
+    {
+        $startDate = $request->get('startDate');
+        $endDate = $request->get('endDate');
+        $dataMedium = $request->get('medium');
+        $city = $request->get('city');
+        $phase = $request->get('phase');
+        $type = $request->get('type');
+
+        $data = DB::table('leads');
+     
+        if($dataMedium != '' && $dataMedium != NULL)
+        {
+            $data = $data->where('data_medium', $dataMedium);
+        }
+  
+        if($startDate != null && $startDate != '' && $endDate != null && $endDate != '')
+        {
+            $data = $data->whereDate('last_call', '>=', $startDate);
+            $data = $data->whereDate('last_call', '<=', $endDate);
+        }
+        $data = $data->where('lead_status', 'sale');
+        $data = $data->groupBy('data_medium');
+        $data = $data->select('data_medium', DB::raw('COUNT(id) as total'));
+        $data = $data->orderBy('total','desc');
+        $data = $data->get();
+        $count = 0;
+        $html = '';
+        if($data)
+        {
+            $i=1;
+            foreach($data as $total_sales)
+            {
+            $html .= '<tr>
+                        <td >'.$i.'</td>
+                        <td >'.$total_sales->data_medium.'</td>
+                        <td >'.$total_sales->total.'</td>
+                      </tr>';
+                $count = $total_sales->total + $count;
+                $i++;
+            }
+            $html .= '<tr>
+                        <td ></td>
+                        <td ><strong>Total</strong></td>
+                        <td ><strong>'.$count.'</strong></td>
+                      </tr>';
+        }
+        else
+        {
+            $html .= '<tr class="text-center">
+                        <td colspan="3"><h4>No data found!</h4></td>
+                    </tr>';
+        }
+        return response()->json(['html' => $html, 'total' => $count ]);
+    }
+
+
 }

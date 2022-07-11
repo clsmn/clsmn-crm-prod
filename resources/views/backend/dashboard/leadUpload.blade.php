@@ -71,11 +71,51 @@ thead {
     background: #fff;
     cursor: pointer;
     padding: 5px 5px;
-    /* border: 1px solid #ccc; */
     width: 310px;
-    /* position: absolute; */
-    /* right: 170px; */
     margin-right: 20px;
+}
+.multiselect
+{
+    width: 290px;
+}
+
+.multiselect-container 
+{
+    width: 100%;
+    height: 300px;
+    overflow-x: scroll;
+    padding: 10px;
+    z-index: 1;
+}
+
+.btn-group
+{
+    background: #fff;
+    cursor: pointer;
+    padding: 5px 5px;
+    width: 310px;
+    margin-right: 20px;
+}
+
+.filter-div
+{
+        right: 540px;
+    position: absolute;
+    top: 0;
+}
+.multiselect-container
+{
+    padding: 0px 10px !important;
+}
+#myInput {
+  background-image: url('/css/searchicon.png');
+  background-position: 10px 10px;
+  background-repeat: no-repeat;
+  width: 100%;
+  font-size: 16px;
+  padding: 12px 20px 12px 40px;
+  border: 1px solid #ddd;
+  margin-bottom: 12px;
 }
 </style>
 
@@ -87,6 +127,16 @@ thead {
              <span class="has-spinner" id="calendar-filter">
                 <span class="spinner"><i class="fa fa-refresh fa-spin"></i></span></span>
                 <span class="has-spinner text-danger" id="filter-message" >{{date('d M, Y')}}</span>
+                <div class="filter-div">
+                    <label>Filter Source</label>
+                   
+                    <select name="langOpt[]" class="pull-right" multiple id="langOpt">
+                        @foreach($dataMediums as $source)
+                            <option value="{{ $source }}">{{ $source }}</option>
+                        @endforeach
+                    </select>
+                <button class="btn btn-success" onclick="filterSource();" id="source-filter"> Filter </button>
+                </div>
             <div class="box-tools pull-right">
                
                 <div id="datePickerLead" style="background: #fff; cursor: pointer; padding: 5px 5px; border: 1px solid #ccc; width: 310px;position: absolute;right: 170px;margin-right: 20px;">
@@ -94,8 +144,8 @@ thead {
 
                     <span>Select Date Range</span> <i class="fa fa-caret-down"></i>
                 </div>
-                <input type="hidden" name="endDate" value="">
-                <input type="hidden" name="startDate" value="">
+                <input type="hidden" name="endDate" id="endDate" value="">
+                <input type="hidden" name="startDate" id="startDate" value="">
                 <div class="pull-right mb-10">
                     <button id="btnExport" class="btn btn-success btn-xs" onclick="fnExcelReport();" > Excel Export</button>
                 </div>
@@ -105,6 +155,7 @@ thead {
         </div><!-- /.box-header -->
 
         <div class="box-body">
+            <input type="text" id="myInput" onkeyup="sourceSearch()" placeholder="Search for source.." title="Type in a source">
             <div class="table-responsive">
                 <table id="upload-data-table" class="table table-condensed  table-hover mt-5 header data-sticky-header">
                 @if($html == '')
@@ -148,6 +199,8 @@ thead {
 
       </div>
     </div>
+<button type="button" class="btn btn-info btn-lg hidden" id="modal-open" data-toggle="modal" data-target="#myModal">Open Modal</button>
+
 @endsection
 
 @section('after-scripts')
@@ -159,16 +212,15 @@ thead {
     <script type="text/javascript" src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.min.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
-    <script  src="https://maps.googleapis.com/maps/api/js?libraries=places&amp;key={{ env('GOOGLE_MAP_KEY') }}"></script>
+    <!-- <script  src="https://maps.googleapis.com/maps/api/js?libraries=places&amp;key={{ env('GOOGLE_MAP_KEY') }}"></script> -->
 
     <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.0.1/js/dataTables.buttons.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
     <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.0.1/js/buttons.html5.min.js"></script>
+    <!-- <script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script> -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/0.9.13/js/bootstrap-multiselect.js"></script>
-      <script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
-
     {{ Html::script("js/backend/plugin/geocomplete/jquery.geocomplete.js") }}
     {{ Html::script("js/backend/plugin/input-mask/jquery.inputmask.js") }}
     {{ Html::script("js/backend/plugin/input-mask/jquery.inputmask.date.extensions.js") }}
@@ -212,9 +264,15 @@ thead {
             $('#source-filter').attr("disabled", true);
             cb(picker.startDate, picker.endDate);
             startDate = picker.startDate.format('YYYY-MM-DD');
-            endDate = picker.endDate.format('YYYY-MM-DD');
             $('#startDate').val(startDate);
+            var oneDate = moment(startDate, 'YYYY-MM-DD');
+            var sDate = oneDate.format('DD MMMM, YYYY');
+            
+            endDate = picker.endDate.format('YYYY-MM-DD');
             $('#endDate').val(endDate);
+            var oneDate = moment(endDate, 'YYYY-MM-DD');
+            var eDate = oneDate.format('DD MMMM, YYYY');
+           
             $.ajax({
                 url : baseURL + '/admin/lead/leadUploadByDate',
                 type : 'get',
@@ -223,7 +281,7 @@ thead {
                 {
                     $("#calendar-filter").removeClass("active");
                     $('#upload-data-table').html(response);
-                    $('#resultPerformance').html('<small>Display results from '+startDate+' to '+endDate+'. </small>');
+                    $('#resultPerformance').html('<small>Display results from '+sDate+' to '+eDate+'. </small>');
                     $('#filter-message').html('');
                     $('#btnExport').attr("disabled", false);
                     $('#refresh-performance').attr("disabled", false);
@@ -256,7 +314,8 @@ function getUploadDetail(source,stDate,enDate)
                     $('#modal-sub-head').html('<small>From '+stDate+' To '+enDate+'.');
 
                     $('#modal-table').html(response);
-                    $('#myModal').modal('show');
+                    // $('#myModal').modal('show');
+                    $('#modal-open').click();
                 }
             });
 }
@@ -294,6 +353,64 @@ function fnExcelReport()
 
     return (sa);
 }
+$(document).ready(function() {
+    $('#langOpt').multiselect({
+    columns: 1,
+    placeholder: 'Select Source',
+    search: true,
+    });
+});
+    function filterSource()
+{
+    $('#calendar-filter').toggleClass('active');
+    $('#refresh-performance').attr("disabled", true);
+    $('#btnExport').attr("disabled", true);
+    $('#filter-message').html('<small>Preparing data. Please do not close or refresh page. </small>');
+    $('#source-filter').attr("disabled", true);
+    var open = [];
+    $("#langOpt option:selected").each(function(){
+        open.push($(this).val());
+    });
+    var sources = open.join(",");
+    startDate = $('#startDate').val();
+    endDate = $('#endDate').val();
 
+    $.ajax({
+                url : baseURL + '/admin/lead/getuploadleadByfilter',
+                type : 'get',
+                'data' : 'startDate='+startDate+'&endDate='+endDate+'&sources='+sources,
+                success: function(response)
+                {
+                    console.log(response);
+                    debugger;
+                    $("#calendar-filter").removeClass("active");
+                    $('#upload-data-table').html(response);
+                    $('#filter-message').html('');
+                    $('#btnExport').attr("disabled", false);
+                    $('#refresh-performance').attr("disabled", false);
+                    $('#source-filter').attr("disabled", false);
+                }
+            });
+}
+
+function sourceSearch() {
+  var input, filter, table, tr, td, i, txtValue;
+  input = document.getElementById("myInput");
+  filter = input.value.toUpperCase();
+  table = document.getElementById("upload-data-table");
+  tr = table.getElementsByTagName("tr");
+  for (i = 0; i < tr.length; i++) {
+    td = tr[i].getElementsByTagName("td")[0];
+    if (td) {
+      txtValue = td.textContent || td.innerText;
+      if (txtValue.toUpperCase().indexOf(filter) > -1) {
+        tr[i].style.display = "";
+      } else {
+        tr[i].style.display = "none";
+      }
+    }       
+  }
+}
 </script>
+
 @endsection

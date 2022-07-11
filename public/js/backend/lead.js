@@ -40,7 +40,22 @@ $(function() {
             {
                 if(response.Status == '200')
                 {
-                    var html = '<button class="btn '+response.Data.status_class+'">'+response.Data.lead_status+'</button> ('+response.Data.data_medium+')'+'<span class="assign text-center" style="padding-left:25%"> '+response.Data.country_code+'-'+response.Data.phone+'</span><span class="assign float-right">Assigned To: '+response.Data.assigned_to_name+'</span>'
+                    if(response.Data.data_medium == 'FBL_REM_MS')
+                    {
+                        if(response.Data.lead_status == 'NO_ANSWER')
+                        {
+                            var status = 'OPEN';
+                        }
+                        else
+                        {
+                            var status = response.Data.lead_status;
+                        }
+                    }
+                    else
+                    {
+                        var status = response.Data.lead_status;
+                    }
+                    var html = '<button class="btn '+(response.Data.lead_status == 'NO_ANSWER'? '' : response.Data.status_class)+'">'+status+'</button> ('+response.Data.data_medium+')'+'<span class="assign text-center" style="padding-left:25%"> '+response.Data.country_code+'-'+response.Data.phone+'</span><span class="assign float-right">Assigned To: '+response.Data.assigned_to_name+'</span>'
                     $("#showLeadModal").find('.modal-title').find('span').html(html);
                 }
             }
@@ -579,6 +594,7 @@ $(function() {
                 data    : 'childId='+childId+'&childName='+childName+'&childDob='+childDob+'&childClass='+childClass+'&packageId='+packageId,
                 success : function(response)
                 {
+                    
                     if(response.Status == '200')
                     {
                         var html = '<tr>';
@@ -639,6 +655,7 @@ $(function() {
     });
 
     $('body').on('click', '.cloudCallLead', function(){
+        $('.cloudCallLead').prop('disabled', true);
         $('.cloudCallLead').html('Please wait...');
         var leadId = $(this).attr('data-val');
         $('#leadActionMessage').html('');
@@ -650,15 +667,15 @@ $(function() {
             success : function(response)
             {
                 if(response.Status == '200') {
-                    $('#cloudCallStatus').html('Calling...');
-                    $('.cloudCallLead').remove();
+                    $('#cloudCallStatus').html('Please wait, Call in process.');
+                    // $('.cloudCallLead').remove();
                     $('#callBox').removeClass('hide');
                     $('.callSubmit').attr('data-val', response.Data.id);
                     $('.caller-number').html(response.Data.phone);
                     $('.called_by').html(response.Data.called_by);
                     $('.called_at').html(response.Data.called_at);
                     fillLeadStage(response.Data.lead_stage);
-                    updateCloudCallStatus(response.Data.id);
+                    // updateCloudCallStatus(response.Data.id);
                 }else{
                     $('.cloudCallLead').html('Cloud Call');
                     var html = '<div class="callout callout-danger"><p>'+response.Message+'</p></div>';

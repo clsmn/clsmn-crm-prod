@@ -10,12 +10,18 @@
 @endsection
 
 @section('page-header')
+@php
+$userLogin = Auth::user();
+@endphp
     <h1>
         {{ trans('labels.backend.leads.management') }}
         
         <div class="pull-right">
             @if($checkOut)
                 <a href="{{ route('admin.check_out') }}" class="btn btn-danger btn-xs">Check Out</a>
+                @if($userLogin->office24by_username != '' || $userLogin->office24by_username != null)
+                    <a onclick="fetchIncoming();" class="btn btn-success btn-xs">Fetch Incoming Details</a>
+                @endif
             @endif
             {{-- <a href="{{ route('admin.fetch.leads') }}" class="btn btn-warning btn-xs hide" id="fetchLeads">Fetch Leads</a> --}}
         </div>
@@ -29,8 +35,11 @@
             <div class="nav-tabs-custom {{ ($checkIn)? 'overlay-wrapper':''}}">
                 <ul class="nav nav-tabs">
                     <li class="active"><a href="#tab_1" data-toggle="tab" aria-expanded="true">Call List</a></li>
+                    @if(Auth::id() != 140)
                     <li class=""><a href="#tab_7" data-toggle="tab" aria-expanded="false">Follow Ups</a></li>
+                    @endif
                     <li class=""><a href="#tab_5" data-toggle="tab" aria-expanded="false">Call History</a></li>
+                    <!-- <li class=""><a href="#tab_8" data-toggle="tab" aria-expanded="false">Incoming History</a></li> -->
                     <!-- <li class=""><a href="#tab_6" data-toggle="tab" aria-expanded="false">Transferred</a></li> -->
                 </ul>
                 <div class="tab-content">
@@ -142,6 +151,7 @@
                             </select>
                             <select id="leadStatusFilter" class="form-control" style="right:590px;">
                                 <option value="">All</option>
+                                <option value="open">Open</option>
                                 <option value="sale">Sale</option>
                                 <option value="hot">Hot</option>
                                 <option value="mild">Mild</option>
@@ -192,6 +202,9 @@
                             </table>
                         </div><!--table-responsive-->
                     </div>
+
+                    <!-- /.tab-pane -->
+             
                 </div>
                 <!-- /.tab-content -->
                 @if($checkIn)
@@ -221,7 +234,41 @@
         </div>
         <!-- /.modal-dialog -->
     </div>
+<!-- Modal -->
+<div id="incomingCallDetails" class="modal fade" role="dialog">
+  <div class="modal-dialog">
 
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Incoming Call Details</h4>
+      </div>
+      <div class="modal-body">
+        <table class="table table-condensed table-hover dataTable no-footer">
+            <thead>
+                <tr>
+                    <th>Lead ID</th>
+                    <th>Caller Name</th>
+                    <th>Caller Number</th>
+                    <th>Call Time</th>
+                    <th>Lead Assigned</th>
+                </tr>
+            </thead>
+            <tbody id="incomingResponse">
+                <tr></tr>
+                <tr></tr>
+                <tr></tr>
+            </tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+
+  </div>
+</div>
 @endsection
 
 @section('after-scripts')
@@ -238,7 +285,37 @@
     {{ Html::script("js/backend/plugin/datepicker/bootstrap-datepicker.js") }}
     {{ Html::script("js/backend/plugin/datetimepicker/bootstrap-datetimepicker.min.js") }}
 
+    <script type="text/javascript">
+    function fetchIncoming()
+    {
+        $.ajax({
+                url : baseURL + '/admin/getIncomingDetail',
+                type : 'get',
+                success: function(response)
+                {
+                    console.log(response);
+                    $('#incomingResponse').html(response);
+                    $('#incomingCallDetails').modal('show');
+                }
+            });
+        
+    }
+</script>
     <script>
+        function incoming()
+        {
+            $("#showLeadModal").attr('data-val', $('#lead-dataval').attr('data-val'));
+            var html = $('#lead-dataval').attr('data-name') + ' <span></span>';
+            $("#showLeadModal").find('.modal-title').html(html);
+            $('#incomingCallDetails').modal('hide');
+            $("#showLeadModal").modal({
+                backdrop: 'static',
+                keyboard: false,
+                show: true
+            });
+            document.getElementById("showLeadModal").style.overflow = "scroll";
+        }
+
     $(function() {
         var startDate = '';
         var endDate = '';
@@ -268,6 +345,7 @@
                 $(row).click(function(){
                     $("#showLeadModal").attr('data-val', $(this).attr('data-val'));
                     var html = $(this).attr('data-name') + ' <span></span>';
+                    console.log(html);debugger;
                     $("#showLeadModal").find('.modal-title').html(html);
                     $("#showLeadModal").modal({
                         backdrop: 'static',
@@ -415,6 +493,57 @@
         //     searchDelay: 500
         // });
 
+
+        // var calledTable = $('#called-list-incoming-table').DataTable({
+        //     bStateSave: true,
+        //     processing: true,
+        //     serverSide: true,
+        //     autoWidth : false,
+        //     createdRow: function( row, data, dataIndex ) {
+        //         $(row).attr('data-val', data.lead_id);
+        //         $(row).attr('data-name', (data.name !='')? data.name : data.phone);
+        //     },
+        //     rowCallback:function(row){
+        //         $(row).click(function(e){
+        //             if(!$(e.target).hasClass('recordPlay'))
+        //             {
+        //                 $("#showLeadModal").attr('data-val', $(this).attr('data-val'));
+        //                 var html = $(this).attr('data-name') + ' <span></span>';
+        //                 $("#showLeadModal").find('.modal-title').html(html);
+        //                 $("#showLeadModal").modal({
+        //                     backdrop: 'static',
+        //                     keyboard: false,
+        //                     show: true
+        //                 });
+        //             }
+        //         });
+        //     },
+        //     ajax: {
+        //         url: '{{ route("admin.lead.called.get.incoming") }}',
+        //         type: 'post',
+        //         data: function(d) {
+        //             d.start_date = startDate;
+        //             d.end_date = endDate;
+        //             d.city = '';
+        //             d.medium = $('#sourceFilter2').val();
+        //             d.lead_status = $('#leadStatusFilter').val();
+        //         }
+        //     },
+        //     columns: [
+        //         {data: 'lead_id', name:  'lead_id', searchable: false},
+        //         {data: 'country_code', name:  'country_code',  searchable: false},
+        //         {data: 'phone', name:  'phone'},
+        //         {data: 'name', name:  'name', searchable: false},
+        //         {data: 'call_duration', name:  'call_duration', searchable: false},
+        //         {data: 'called_at', name:  'called_at', searchable: false},
+        //         {data: 'next_follow_up', name:  'next_follow_up', searchable: false},
+        //         {data: 'lead_status', name:  'lead_status', searchable: false, orderable:false},
+        //     ],
+        //     order: [[0, "asc"]],
+        //     searchDelay: 500
+        // });
+
+
         var calledTable = $('#called-list-table').DataTable({
             bStateSave: true,
             processing: true,
@@ -448,6 +577,7 @@
                     d.city = '';
                     d.medium = $('#sourceFilter2').val();
                     d.lead_status = $('#leadStatusFilter').val();
+                    d.type = 'called';
                 }
             },
             columns: [

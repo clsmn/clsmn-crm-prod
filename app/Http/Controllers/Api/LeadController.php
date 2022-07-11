@@ -69,7 +69,8 @@ class LeadController extends Controller
 
     public function callHistory(Request $request)
     {
-        $data = $this->leadRepository->getCallHistoryForAPI($request);
+        $data = $this->leadRepository->getCallHistoryForAPI1($request);
+        // die("*/***");
         return response()->json(['Status' => 200, 'Message' => 'Success', 'Data' => $data])->setStatusCode(200);
     }
 
@@ -197,14 +198,14 @@ class LeadController extends Controller
         {
             
             if($historyItem->type_id == '4' && $historyItem->sub_type == 'call'){
-                if($historyItem->call->exotel_sid != null && $historyItem->call->exotel_sid != ''){
+                if($historyItem->call->office_ref_id != null && $historyItem->call->office_ref_id != ''){
                     $callDuration = ($historyItem->call->duration != null)? duration($historyItem->call->duration, true) : '';
                 }else{
                     $callDuration = ($historyItem->call->duration != null)? duration($historyItem->call->duration) : '';
                 }
 
                 $callRecording = null;
-                if($historyItem->call->exotel_sid != null && $historyItem->call->exotel_sid != '') {
+                if($historyItem->call->office_ref_id != null && $historyItem->call->office_ref_id != '') {
                     if($historyItem->call->call_record_file != null) {
                         $callRecording = $historyItem->call->call_record_file;
                     }
@@ -228,6 +229,10 @@ class LeadController extends Controller
                     'call_saved'        => $historyItem->call->saved,
                     'lead_status'       => leadStatus($historyItem->call->lead_status),
                     'note'              => $historyItem->call->note,
+                    'cloud_call_status' => $historyItem->call->office_callStatus,
+                    'office_callType'   => $historyItem->call->office_callType,
+                    'source'            => $historyItem->call->data_medium,
+                    'office24by_audioURL' => $historyItem->call->office24by_audioURL,
                 );
             }else if($historyItem->type_id == '4' && $historyItem->sub_type == 'unattached_call'){
                 $callRecording = null;
@@ -242,6 +247,10 @@ class LeadController extends Controller
                     'call_agenda'       => '',
                     'time'              => $historyItem->call_record->created_at->format(config('access.date_time_format')),
                     'call_recording'    => $callRecording,
+                    'cloud_call_status' => $historyItem->call->office_callStatus,
+                    'office_callType'   => $historyItem->call->office_callType,
+                    'source'            => $historyItem->call->data_medium,
+                    'office24by_audioURL' => $historyItem->call->office24by_audioURL,
                 );
             }else if($historyItem->type_id == '4' && $historyItem->sub_type == 'note'){
                 $result[] = array(
@@ -250,6 +259,7 @@ class LeadController extends Controller
                     'added_by'          => $historyItem->note->user->name,
                     'time'              => $historyItem->note->created_at->format(config('access.date_time_format')),
                     'note'              => $historyItem->note->note,
+                    'source'            => $historyItem->call->data_medium,
                 );
             }else if($historyItem->type_id == '4' && $historyItem->sub_type == 'call_record'){
                 $callRecording = null;
@@ -263,6 +273,10 @@ class LeadController extends Controller
                     'call_duration'     => ($historyItem->call_record->duration != null)? duration($historyItem->call_record->duration) : '',
                     'time'              => $historyItem->call_record->created_at->format(config('access.date_time_format')),
                     'call_recording'    => $callRecording,
+                    'cloud_call_status' => $historyItem->call->office_callStatus,
+                    'office_callType'   => $historyItem->call->office_callType,
+                    'source'            => $historyItem->call->data_medium,
+                    'office24by_audioURL' => $historyItem->call->office24by_audioURL,
                 );
             }else{
                 $result[] = array(

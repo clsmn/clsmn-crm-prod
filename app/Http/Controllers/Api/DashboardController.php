@@ -32,7 +32,7 @@ class DashboardController extends Controller
     function appVersion() 
     {
         $data = array(
-            'version' => '1.5'
+            'version' => '1.6'
         );
         return response()->json(['Message' => 'Success', 'Status' => '200', 'Data' => $data]);
     }

@@ -54,6 +54,13 @@ class DataBankController extends Controller
         return response()->json(['Message' => 'Success', 'Status' => '200']);
     }
 
+    function moveToLead1(Request $request, DataUserRepository $dataBankRepo)
+    {
+       
+        $dataBankRepo->assignLeadToExecutive1($request);
+        return response()->json(['Message' => 'Success', 'Status' => '200']);
+    }
+    
     function create(Request $request)
     {
         $executives = User::whereHas('roles', function($query){
@@ -141,6 +148,7 @@ class DataBankController extends Controller
     {
         $camp = $request->get('camp');
         $changeSource = $request->get('changeSource');
+        $clear_history = $request->get('clear_history');
         if(!$camp)
         {
             $camp = 'Manual';
@@ -153,9 +161,9 @@ class DataBankController extends Controller
         
         if(count($data) > 0)
         {
-            if(count($data) > 500)
+            if(count($data) > 1000)
             {
-                $data = array_slice($data, 0, 500);
+                $data = array_slice($data, 0, 1000);
             }
 
             foreach($data as $row)
@@ -167,16 +175,20 @@ class DataBankController extends Controller
                         $number = PhoneNumber::parse($rowData['phone']);
                         $countryCode = $number->getCountryCode();
                         $phoneNumber = $number->getNationalNumber();
+                        
                         if($phoneNumber != '') {
                             $rowData['phone'] = $phoneNumber;
                             $rowData['country_code'] = '+'.$countryCode;    
                         }else{
-                            $rowData['country_code'] = '+91';    
+                            $cc = str_replace("+"," ",$row->country_code);
+                            $rowData['country_code'] = '+'.$cc;      
                             $rowData['phone'] = substr((int) $rowData['phone'], -10);
                         }
                     }
                     catch (PhoneNumberParseException $e) {
-                        $rowData['country_code'] = '+91';    
+
+                        $cc = str_replace("+"," ",$row->country_code);
+                        $rowData['country_code'] = '+'.$cc;    
                         $rowData['phone'] = substr((int) $rowData['phone'], -10);
                     }
 
@@ -191,22 +203,22 @@ class DataBankController extends Controller
         $sources = $dataBankRepo->getMediumFilter();
         $sources = $sources->toArray();
         $options = json_encode(['data' =>  $sources]);
-        $upload_data = DB::table('upload_datas')->select('*')->where('date', date('Y-m-d'))->where('data_medium', $camp)->get();
-        if(count($upload_data) == 0)
-        {
-            DB::table('upload_datas')->insert(
-                     array(
-                            'date'     =>   date('Y-m-d'), 
-                            'data_medium'     =>   $camp, 
-                            'repeatlLeads'   =>   0,
-                            'newLeads'   =>   0,
-                            'created_at'   =>   date('Y-m-d h:m:s'),
-                            'updated_at'   =>   date('Y-m-d h:m:s'),
-                            )
-                          );
-        }
+        // $upload_data = DB::table('upload_datas')->select('*')->where('date', date('Y-m-d'))->where('data_medium', $camp)->get();
+        // if(count($upload_data) == 0)
+        // {
+        //     DB::table('upload_datas')->insert(
+        //              array(
+        //                     'date'     =>   date('Y-m-d'), 
+        //                     'data_medium'     =>   $camp, 
+        //                     'repeatlLeads'   =>   0,
+        //                     'newLeads'   =>   0,
+        //                     'created_at'   =>   date('Y-m-d h:m:s'),
+        //                     'updated_at'   =>   date('Y-m-d h:m:s'),
+        //                     )
+        //                   );
+        // }
         
-        return view('backend.data_bank.bulk', compact('data', 'camp', 'changeSource','options'));
+        return view('backend.data_bank.bulk', compact('data', 'camp', 'changeSource','options','clear_history'));
     }
 
     function bulkSave(Request $request, DataUserRepository $dataBankRepo)
@@ -251,8 +263,8 @@ class DataBankController extends Controller
                             'country_code'   =>   $countryCode,
                             'phone'   =>   $phone,
                             'type'  => 'existing',
-                            'created_at'   =>   date('Y-m-d h:m:s'),
-                            'updated_at'   =>   date('Y-m-d h:m:s'),
+                            'created_at'   =>   date('Y-m-d H:i:s'),
+                            'updated_at'   =>   date('Y-m-d H:i:s'),
                             )
                           );
             return response()->json(['status' => '200', 'data' => 'Lead added.','leadtype'=>"existing", 'dataUser'=> $dataUser]);
@@ -280,8 +292,8 @@ class DataBankController extends Controller
                             'country_code'   =>   $countryCode,
                             'phone'   =>   $phone,
                             'type'  => 'new',
-                            'created_at'   =>   date('Y-m-d h:m:s'),
-                            'updated_at'   =>   date('Y-m-d h:m:s'),
+                            'created_at'   =>   date('Y-m-d H:i:s'),
+                            'updated_at'   =>   date('Y-m-d H:i:s'),
                             )
                           );
             return DB::transaction(function() use($dataUser, $request, $dataBankRepo){
@@ -326,6 +338,171 @@ class DataBankController extends Controller
         }
     }
 
+    function bulkSave_new(Request $request, DataUserRepository $dataBankRepo)
+    {
+        // print_r($request->all());die("*******");
+        $data = json_decode($request->data);
+        $exixting = '';
+        $new = '';
+        $error = '';
+        $i=1;
+        $j=1;
+        $k = 0;
+        $e = 0;
+        $exixtingCount = 0;
+        $newcount = 0;
+        $errorcount = 0;
+        // print_r($data);die("*******");
+        foreach($data as $value)
+        {
+                $medium = $value->medium;
+                $name = $value->name;
+                $countryCode = $value->country_code;
+                $phone = $value->phone;
+                $city = $value->city;
+                $adPlatform = $value->ad_platform;
+                $changeSource = $value->change_source;
+                $clearHistory = $value->clear_history;
+
+                if(!$medium)
+                $medium = 'manual';
+
+                if(!$name)
+                $name = 'User';
+
+                // Check in data bank
+                $dataUser = DataUser::where('country_code', $countryCode)->where('phone', $phone)->first();
+                // print_r($dataUser);
+
+                if($dataUser)
+                {
+                    $lead_exist = Lead::where('data_user_id', $dataUser->id)->select(['id', 'data_medium'])->first();
+
+                    if($clearHistory && $lead_exist)
+                    {
+                        //archive lead history
+                        DB::table('history')->where('entity_id', $lead_exist->id)->update(array('archived' => '1'));
+
+                        //remove assign to and last call from lead.
+                        Lead::where('id', $lead_exist->id)
+                                ->update([
+                                    'assigned_to'       => 0,
+                                    'lead_status'       => 'open',
+                                    'lead_status_at'    => date('Y-m-d H:i:s'),
+                                    'last_call'         => null,
+                                    'last_call_id'      => null,
+                                    'call_date'         => null,
+                                    'next_follow_up'    => null,
+                                    'data_medium'       => ($changeSource == '1')? $medium: $lead_exist->data_medium,
+                                ]);
+                    }
+                    
+                    $dataUser->ad_platform =  $dataUser->ad_platform;
+                    $dataUser->data_medium = ($changeSource == '1')? $medium: $dataUser->data_medium;
+                    //clear history from data bank
+                    if($clearHistory){
+                        $dataUser->assigned_to          = 0;
+                        $dataUser->lead_status          = null;
+                        $dataUser->lead_next_follow_up  = null;
+                        $dataUser->lead_last_call       = null;
+                        $dataUser->moved_to_lead        = '0';
+                    }
+                    $dataUser->updated_at = date('Y-m-d H:i:s');
+                    if($dataUser->save()) {    
+                        $exixting .= '<li>'.$i.'. '.$name.' - '.$countryCode.'-'.$phone.' </li>';
+                        $exixtingCount = $exixtingCount + 1;
+                        $i++;
+                    } else 
+                    {
+                        $error .= '<li>'.$e.'. '.$name.' - '.$countryCode.'-'.$phone.' </li>';
+                        $errorCount = $errorCount + 1;
+                        $e++;
+                    }
+                }
+                else
+                {
+                    // insert into data bank
+                    $dataUser                   = new DataUser;
+                    $dataUser->name             = $name;
+                    $dataUser->country_code     = $countryCode;
+                    $dataUser->phone            = $phone;
+                    $dataUser->status           = '';
+                    $dataUser->city             = $city;
+                    $dataUser->ad_platform      = $adPlatform;
+                    $dataUser->data_medium      = $medium;
+                    $dataUser->moved_to_lead    = '0';
+                    $datasave = $dataUser->save();
+                    // var_dump($datasave);die("****");
+                    if($datasave)
+                    {   
+                        $new .= '<li>'.$j.'. '.$name.' - '.$countryCode.'-'.$phone.' </li>';
+                        $newcount = $newcount + 1;
+                        $j++;
+                    }
+                    else
+                    {
+                        $error .= '<li>'.$e.'. '.$name.' - '.$countryCode.'-'.$phone.' </li>';
+                        $errorCount = $errorCount + 1;
+                        $e++;
+                    }
+                    DB::transaction(function() use($dataUser, $datasave, $request, $dataBankRepo){  
+                        if($datasave)
+                        {
+                            //check on messenger server
+                            $loginUser = '';
+                            $loginUser = DB::connection('login')
+                                            ->table(config('table.login.users'))
+                                            ->where('country_code', $dataUser->country_code)
+                                            ->where('phone', $dataUser->phone)
+                                            ->first();
+                            if($loginUser != null)
+                            {
+                                $dataUser->messenger        = $loginUser->messenger;
+                                $dataUser->messenger_id     = $loginUser->parent_id;
+                                $dataUser->learning         = $loginUser->learning;
+                                $dataUser->learning_id      = $loginUser->learning_id;
+                                $dataUser->community        = $loginUser->community;
+                                $dataUser->community_id     = $loginUser->community_id;
+                                $dataUser->login_id         = $loginUser->id;
+                                $dataUser->status           = $loginUser->status;
+                                $dataUser->update();
+
+                                // assign lead
+                                $executive = $request->get('assigned_to');
+                                $callDate = $request->get('call_date');
+                                if($executive)
+                                {
+                                    $request->request->add([
+                                        'dataUserId' => $dataUser->id,
+                                        'executive'  => $executive,
+                                        'callDate'  => $callDate,
+                                    ]);
+                                    $dataBankRepo->assignLeadToExecutive($request);
+                                }
+                            }
+                            return response()->json(['status' => '200', 'data' => 'Lead added.','leadtype'=>"new", 'dataUser'=> $dataUser]);
+                            // return response()->json(['status' => '200', 'data' => 'Lead added.']);
+                        }
+                        return response()->json(['status' => '422', 'data' => 'Some error occurred try again later.']);
+                    });
+                   
+                }
+                $k++;
+        }
+            DB::table('upload_datas')->insert(
+                     array(
+                            'date'     =>   date('Y-m-d'), 
+                            'data_medium'     =>   $medium, 
+                            'repeatlLeads'   =>   $exixtingCount,
+                            'newLeads'   =>   $newcount,
+                            'created_at'   =>   date('Y-m-d H:i:s'),
+                            'updated_at'   =>   date('Y-m-d H:i:s'),
+                            )
+                          );   
+        return response()->json(['status' => '200', 'data' => 'Lead added.','exixting'=>$exixting,'exixtingCount'=>$exixtingCount,'new'=>$new,'newcount'=>$newcount,'error'=>$error,'errorcount'=>$errorcount,'total'=>$k]);
+
+    }
+
     function upload_data(Request $request)
     {
         $upload_data = DB::table('upload_datas')->select('*')->where('date', date('Y-m-d'))->where('data_medium', $request->medium)->get();
@@ -338,8 +515,8 @@ class DataBankController extends Controller
                     'data_medium'  => $request->medium,
                     'repeatlLeads'   =>   $totalRepeat,
                     'newLeads'   =>    $totalnew,
-                    'created_at'   =>   date('Y-m-d h:m:s'),
-                    'updated_at'   =>   date('Y-m-d h:m:s'),
+                    'created_at'   =>   date('Y-m-d H:i:s'),
+                    'updated_at'   =>   date('Y-m-d H:i:s'),
              )
         );
         // DB::table('upload_datas')

@@ -7,6 +7,27 @@
     {{ Html::style("css/backend/plugin/datepicker/datepicker.css") }}
     {{ Html::style("css/backend/plugin/datetimepicker/bootstrap-datetimepicker.min.css") }}
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
+    <style type="text/css">
+         #stageFilter{
+            position: absolute;
+            width: 200px;
+            right: 1140px;
+            height: 30px;
+            z-index: 9;
+        }
+        .select2
+        {
+            right: 0px !important;
+            width: 100% !important;
+            position: unset !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow
+        {
+            right: 20px !important;
+        }
+    </style>
 @endsection
 
 @section('page-header')
@@ -23,10 +44,10 @@
             <h3 class="box-title">{{ trans('labels.backend.leads.assigned') }}</h3>
             <button id="btnExport">Export</button>
             <div class="box-tools pull-right">
-                <div id="datePickerLead" style="background: #fff; cursor: pointer; padding: 5px 10px; border: 1px solid #ccc; width: 310px;position: absolute;right: 141px;">
+               <!--  <div id="datePickerLead" style="background: #fff; cursor: pointer; padding: 5px 10px; border: 1px solid #ccc; width: 310px;position: absolute;right: 141px;">
                     <i class="fa fa-calendar"></i>&nbsp;
                     <span>Select Date Range</span> <i class="fa fa-caret-down"></i>
-                </div>
+                </div> -->
                 <div class="pull-right mb-10">
                     <button class="btn btn-success btn-xs disabled" disabled id="massAssignment">Mass Assigned To</button>
                 </div>              
@@ -34,34 +55,43 @@
             </div><!--box-tools pull-right-->
         </div><!-- /.box-header -->
         <div class="box-body">
-            <div class="table-responsive">
-                <div class="table-responsive lead-call-list">
-                    <select id="assignedTo" class="form-control">
+             <div class="row mx-auto">
+                <h3 class="text-center"><b>Filters</b></h3>
+                    <div class="col-md-2 col-sm-12 mb-3" style="margin-bottom: 10px;">
+                         <select id="assignedTo" class="form-control">
                         <option value="">Select Executive</option>
                         @foreach($executives as $key => $name)
                         <option value="{{ $key }}">{{ $name }}</option>
                         @endforeach
                     </select>
-                    <select id="leadPhaseFilter" class="form-control">
+                    </div>
+                    <div class="col-md-2 col-sm-12 mb-3" style="margin-bottom: 10px;">
+                        <select id="leadPhaseFilter" class="form-control">
                         <option value="">Select Phase</option>
                         <option value="buy_attempt">Buy Attempt</option>
                         <option value="cart">Cart Abandon</option>
                         <option value="trial">Trial Started</option>
                         <option value="kit_purchased">Kit Purchased</option>
                     </select>
-                    <select id="sourceFilter" class="form-control">
+                    </div>
+                    <div class="col-md-2 col-sm-12 mb-3" style="margin-bottom: 10px;">
+                       <select id="sourceFilter" class="form-control">
                         <option value="">Select Source</option>
                         @foreach($sources as $source)
                         <option value="{{ $source }}">{{ $source }}</option>
                         @endforeach
                     </select>
-                    <select id="cityFilter" class="form-control">
-                        <option value="">Select City</option>
-                        @foreach($cities as $city)
-                        <option value="{{ $city }}">{{ $city }}</option>
-                        @endforeach
-                    </select>
-                    <select id="typeFilter" class="form-control">
+                    </div>
+                    <div class="col-md-2 col-sm-12 mb-3" style="margin-bottom: 10px;">
+                        <select id="cityFilter" class="form-control">
+                            <option value="">Select City</option>
+                            @foreach($cities as $city)
+                            <option value="{{ $city }}">{{ $city }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-2 col-sm-12 mb-3" style="margin-bottom: 10px;">
+                        <select id="typeFilter" class="form-control">
                         <option value="">Show Stage</option>
                         <option value="new">New Leads</option>
                         <option value="followUp">Pending Follow Up</option>
@@ -75,6 +105,19 @@
                         <option value="not_interested">Not Interested</option>
                         <option value="dead">Dead</option>
                     </select>
+                    </div>
+                     <div class="col-md-2 col-sm-12 mb-3" style="margin-bottom: 10px;">
+                        <div id="datePickerLead" style="background: #fff; cursor: pointer; padding: 3px 10px; border: 1px solid #ccc; width: 100%;position: unset;right: 0px; border-radius: 5px;">
+                            <i class="fa fa-calendar"></i>&nbsp;
+                            <span>Select Date Range</span> <i class="fa fa-caret-down"></i>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+            <div class="table-responsive">
+                
+                <div class="table-responsive lead-call-list">
+                 
                     <table id="lead-list-table" class="table table-condensed table-hover">
                         <thead>
                             <tr>
@@ -96,9 +139,73 @@
                     </table>
                 </div><!--table-responsive-->
             </div><!--table-responsive-->
+
+            <!-- <div class="table-responsive">
+                <div class="table-responsive lead-call-list" id="table_sales">
+
+                </div>
+            </div> -->
         </div><!-- /.box-body -->
     </div><!--box-->
-
+    <style type="text/css">
+        #myInput {
+          background-image: url('/css/searchicon.png');
+          background-position: 10px 10px;
+          background-repeat: no-repeat;
+          width: 100%;
+          font-size: 16px;
+          padding: 12px 20px 12px 40px;
+          border: 1px solid #ddd;
+          margin-bottom: 12px;
+        }
+    </style>
+    <div class="box box-success" id="sales-box" style="display:none">
+        <div class="box-header with-border">
+            <div class="table-responsive">
+                <div class="table-responsive lead-call-list">
+                    <h3 class="text-center">Total Sales</h3>
+                    <p class="text-center">Total sales between <span id="dateBetween"></span></p>
+                    <p class="text-center"><strong>Total Kits - <span id="total_count"></span></strong></p>
+                    <hr>
+                    <input type="text" id="myInput" onkeyup="sourceSearch()" placeholder="Search for source.." title="Type in a source">
+                    <table id="Sales-table" class="main-table table-hover table-striped mt-5" style="width:100%;margin-top: 20px;border-collapse: separate;    border-spacing: 0 1em;">
+                        <thead>
+                            <tr>
+                                <th  >#</th>
+                                <th >Lead Source</th>
+                                <th >Total Sale</th>
+                            </tr>
+                        </thead>
+                        <tbody  id="table_sales">
+                            <tr class="text-center">
+                                <td colspan="3"><h4>No data found!</h4></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript">
+        function sourceSearch() {
+              var input, filter, table, tr, td, i, txtValue;
+              input = document.getElementById("myInput");
+              filter = input.value.toUpperCase();
+              table = document.getElementById("Sales-table");
+              tr = table.getElementsByTagName("tr");
+              for (i = 0; i < tr.length; i++) {
+                td = tr[i].getElementsByTagName("td")[0];
+                if (td) {
+                  txtValue = td.textContent || td.innerText;
+                  if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    tr[i].style.display = "";
+                  } else {
+                    tr[i].style.display = "none";
+                  }
+                }       
+              }
+            }
+    </script>
     <div class="modal fade" id="showLeadModal" style="display: none;">
         <div class="modal-dialog" style="width:90%">
             <div class="modal-content">
@@ -162,19 +269,22 @@
 @endsection
 
 @section('after-scripts')
-    {{ Html::script("js/backend/plugin/Bootstrap-Confirmation-2/bootstrap-confirmation.min.js") }}
-    {{ Html::script("js/backend/plugin/datatables/jquery.dataTables.min.js") }}
+   {{ Html::script("js/backend/plugin/datatables/jquery.dataTables.min.js") }}
     {{ Html::script("js/backend/plugin/datatables/dataTables.bootstrap.min.js") }}
     <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
-    <script  src="https://maps.googleapis.com/maps/api/js?libraries=places&amp;key={{ env('GOOGLE_MAP_KEY') }}"></script>
-    {{ Html::script("js/backend/plugin/geocomplete/jquery.geocomplete.js") }}
     {{ Html::script("js/backend/plugin/input-mask/jquery.inputmask.js") }}
     {{ Html::script("js/backend/plugin/input-mask/jquery.inputmask.date.extensions.js") }}
     {{ Html::script("js/backend/plugin/input-mask/jquery.inputmask.extensions.js") }}
     {{ Html::script("js/backend/plugin/datepicker/bootstrap-datepicker.js") }}
-    {{ Html::script("js/backend/plugin/datetimepicker/bootstrap-datetimepicker.min.js") }}
+    {{ Html::script("js/backend/plugin/select2/select2.full.min.js") }}
+    <script src="https://cdn.datatables.net/plug-ins/1.10.12/pagination/input.js"></script>
     <script>
+         $(document).ready(function () {
+    //change selectboxes to selectize mode to be searchable
+       $("select").select2();
+    });
+
     $(function() {
         var startDate = '';
         var endDate = '';
@@ -193,7 +303,7 @@
             processing: true,
             serverSide: true,
            "lengthMenu": [[10, 25, 30,50, 100, 200, 500, 1000, 2000], [10,25,30,50, 100, 200, 500, 1000, 2000]],
-            "pageLength": 25,            
+            "pageLength": 50,            
             createdRow: function( row, data, dataIndex ) {
                 $(row).attr('data-val', data.id);
                 $(row).attr('data-du', data.data_user_id);
@@ -276,6 +386,26 @@
             window.open('data:application/vnd.ms-excel,' + encodeURIComponent($('#lead-list-table').parent().html()));
         });
         $('#cityFilter, #typeFilter, #assignedTo, #sourceFilter, #leadPhaseFilter').change(function(){
+            city = $('#cityFilter').val();
+            type = $('#typeFilter').val();
+            medium = $('#sourceFilter').val();
+            phase = $('#leadPhaseFilter').val();
+            assignedTo = $('#assignedTo').val();
+                  
+             $.ajax({
+                url: '{{ route("admin.lead.assigned.getAssignedlead") }}',
+                type : 'post',
+                'data' : 'city='+city+'&type='+type+'&medium='+medium+'&phase='+phase+'&assignedTo='+assignedTo+'&startDate='+startDate+'&endDate='+endDate,
+                success: function(response)
+                {
+                    $('#sales-box').show();
+                   var html = startDate+' - '+endDate
+                       
+                   $('#dateBetween').html(html);
+                   $('#table_sales').html(response.html);
+                   $('#total_count').html(response.total);
+                }
+            });
             leadTable.draw();
         });
 
@@ -387,6 +517,27 @@
             cb(picker.startDate, picker.endDate);
             startDate = picker.startDate.format('YYYY-MM-DD');
             endDate = picker.endDate.format('YYYY-MM-DD');
+            city = $('#cityFilter').val();
+            type = $('#typeFilter').val();
+            medium = $('#sourceFilter').val();
+            phase = $('#leadPhaseFilter').val();
+            assignedTo = $('#assignedTo').val();
+                  
+             $.ajax({
+                    url: '{{ route("admin.lead.assigned.getAssignedlead") }}',
+                    type : 'post',
+                    'data' : 'city='+city+'&type='+type+'&medium='+medium+'&phase='+phase+'&assignedTo='+assignedTo+'&startDate='+startDate+'&endDate='+endDate,
+                    success: function(response)
+                    {
+                       $('#sales-box').show();
+                       var html = startDate+' - '+endDate
+                       
+                       $('#dateBetween').html(html);
+                       $('#table_sales').html(response.html);
+                       $('#total_count').html(response.total);
+                       
+                    }
+                });
             leadTable.draw(false);
         });
 

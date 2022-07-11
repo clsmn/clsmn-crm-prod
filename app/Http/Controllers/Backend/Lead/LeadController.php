@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Backend\Lead;
 
+use Storage;
 use App\Models\Lead\Lead;
 use App\Models\DailyTrack;
 use Illuminate\Http\Request;
@@ -17,6 +18,7 @@ use App\Events\Backend\Lead\LeadCalled;
 use App\Models\AlternateNumber\AlternateNumber;
 use App\Repositories\Backend\Lead\LeadRepository;
 use App\Repositories\Backend\DataUser\DataUserRepository;
+use Auth;
 /**
  * Class LeadController.
  */
@@ -57,7 +59,25 @@ class LeadController extends Controller
 
         return view('backend.lead.index', compact('track', 'leadStage', 'checkIn', 'checkOut', 'sources'));
     }
+    public function cloudCall(Request $request)
+    {
+        // $user = $request->user();
+        // echo  date('Y-m-d',strtotime("-2 day"));
+        // die("****");
+        $office24response = DB::table('office24response')->select('response')->where('user','!=','')->where('call_time','>=', date('Y-m-d',strtotime("-2 day")))->orderBy('call_time','desc')->get();
 
+        // $office24response =  DB::table('office24response')
+        //             ->select('office24response.*','users.*')
+        //             ->join('users', 'users.office24by_username', '=', 'office24response.user')
+        //             ->where('office24response.user','!=','')
+        //             ->where('office24response.call_time','>=', date('Y-m-d',strtotime("-2 day")))
+        //             ->get();
+
+       
+        // print_r($office24response);
+        // die("******");
+        return view('backend.lead.cloudCall', compact('office24response'));
+    }
     function callHistory(Request $request, LeadRepository $leadRepo)
     {
         $leadStage = DB::table('lead_stage')->pluck('message', 'id');
@@ -80,6 +100,7 @@ class LeadController extends Controller
 
     function getLead(Lead $lead, Request $request)
     {
+        
         //Get active subscriptions
         $subscriptions = collect([]);
 
@@ -89,6 +110,8 @@ class LeadController extends Controller
                                 ->where('country_code', $lead->country_code)
                                 ->where('phone', $lead->phone)
                                 ->first();
+        // $loginServerUser =   DB::table('users')->where('phone', $lead->phone)->first();
+       
         if($loginServerUser != null)
         {
             $lead->login_id = $loginServerUser->id;
@@ -97,7 +120,6 @@ class LeadController extends Controller
             $lead->learning_id = $loginServerUser->learning_id;
             $lead->update();
         }
-
         if($lead->learning != '0' && $lead->learning_id != '0')
         {
             $subscriptions = DB::connection('learning')
@@ -106,8 +128,8 @@ class LeadController extends Controller
                         ->leftJoin(config('table.learning.packages').' as p', 'p.id', '=', 's.packages_id')
                         ->leftJoin(config('table.learning.package_orders').' as po', 'po.order_id', '=', 's.order_id')
                         ->where('s.user_id', $lead->learning_id)
-                        ->where('s.subscription_status', 'ACTIVE')
-                        ->select('s.alias', 'p.package_name', 's.subscription_type', 'po.package_addons_id', 'c.child_name', 'c.child_class', 's.created_at')
+                        // ->where('s.subscription_status', 'ACTIVE')
+                        ->select('s.alias', 'p.package_name', 's.subscription_type', 'po.package_addons_id', 'c.child_name', 'c.child_class','s.subscription_status', 's.created_at')
                         ->get();
             $leadStage = '2';
             if($subscriptions->count() > 0)
@@ -162,12 +184,20 @@ class LeadController extends Controller
             $this->removeLoginRequestId($requestID);
         }
 
-        $executives = User::where('id', '24')
+        $executives = User::whereIn('id', [24,272])
+                    // ->where('id', '272')
                     ->pluck('name', 'id');
-                    
         $user = $request->user();
+        $packages="";
+        // $subscriptions="";
+        // print_r($lead);
+        $total_history_count = DB::table('call_history')->select('id')->where('lead_id',$lead->id)->where('data_medium','FBL_REM_MS')->count();
 
-        return view('backend.lead.show', compact('lead', 'address', 'packages', 'subscriptions', 'children', 'executives', 'user'));
+        $total_history_no_answer_count = DB::table('call_history')->select('id')->where('lead_id',$lead->id)->where('lead_status','no_answer')->where('data_medium','FBL_REM_MS')->count();
+        // $no_answer_source = DB::table('no_answer_sources')->pluck('source_name');
+        $children="";
+        return view('backend.lead.show', compact('lead', 'address','packages', 'subscriptions', 'children', 'executives', 'user','total_history_count','total_history_no_answer_count'));
+        // return view('backend.lead.show', compact('lead', 'address', 'packages', 'subscriptions', 'children', 'executives', 'user'));
     }
 
     function setPrimaryNumber(Request $request, LeadRepository $leadRepository)
@@ -524,6 +554,20 @@ class LeadController extends Controller
         }
     }
 
+    function guidv4($data = null) {
+        // Generate 16 bytes (128 bits) of random data or use the data passed into the function.
+        $data = $data ?? random_bytes(16);
+        assert(strlen($data) == 16);
+
+        // Set version to 0100
+        $data[6] = chr(ord($data[6]) & 0x0f | 0x40);
+        // Set bits 6-7 to 10
+        $data[8] = chr(ord($data[8]) & 0x3f | 0x80);
+
+        // Output the 36 character UUID.
+        return vsprintf('%s%s%s%s%s%s%s%s', str_split(bin2hex($data), 4));
+    }
+
     function cloudCallLead(Lead $lead, Request $request, LeadRepository $leadRepository)
     {
         $user = $request->user();
@@ -540,36 +584,59 @@ class LeadController extends Controller
             $callHistory->phone = $phone;
             $callHistory->called_by = $user->id;
             $callHistory->lead_status = $lead->lead_status;
+            $callHistory->data_medium = $lead->data_medium;
+
+            // if($user->phone != NULL && $user->phone != '') {
+
+                // OFFICE24BY7 CALLING CODE START
+
+                $apiKey= 'a138e183-15b5-45c8-a05b-c2ab3f173be5';
+                $agentloginid=  $user->office24by_username;
+                $servienumber= '+912235155149';
+                $customernumber= $phone;
+                $format= 'json';
+                $refrence_number = $this->guidv4();
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL,"https://app.office24by7.com/v1/communication/API/clickToCall");
+                curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+                curl_setopt($ch, CURLOPT_POSTFIELDS, "apiKey=".$apiKey."&agentloginid=".$agentloginid."&servienumber=".$servienumber."&customernumber=".$customernumber."&format=".$format."&referencestate=".$refrence_number);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                $get_api_response = curl_exec($ch);
+                curl_close($ch);
+                $callHistory->office_ref_id = $refrence_number;
+
+                // OFFICE24BY7 CALLING CODE ENDS
 
 
-            if($user->phone != NULL && $user->phone != '') {
+                // EXOTEL CODE START
+
                 // if($user->phone == '9074251626'){
                 //     $phone = '7053515290';
                 // }
                 // create call using exotel
-                $response = Curl::to('https://'.env('EXOTEL_API_KEY').':'.env('EXOTEL_API_TOKEN').'@'.env('EXOTEL_SUBDOMAIN').'/v1/Accounts/'.env('EXOTEL_SID').'/Calls/connect')
-                            ->withData([
-                                'From' => '0'.$user->phone,
-                                'To' => '0'.$phone,
-                                // 'From' => '09074251626',
-                                // 'To' => '07053515290',
-                                'CallerId' => env('EXOTEL_CALLER_ID'),
-                                'CallType' => 'trans',
-                                'TimeLimit' => '1200'
-                            ])
-                            ->post();
-                            
-                $responseXML = json_decode(json_encode(simplexml_load_string($response)));
-
-                // Curl::to('https://hooks.slack.com/services/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')
-                //             ->withData( array( 'text' => json_encode($responseXML) ) )
-                //             ->asJson()
+                // $response = Curl::to('https://'.env('EXOTEL_API_KEY').':'.env('EXOTEL_API_TOKEN').'@'.env('EXOTEL_SUBDOMAIN').'/v1/Accounts/'.env('EXOTEL_SID').'/Calls/connect')
+                //             ->withData([
+                //                 'From' => '0'.$user->phone,
+                //                 'To' => '0'.$phone,
+                //                 // 'From' => '09074251626',
+                //                 // 'To' => '07053515290',
+                //                 'CallerId' => env('EXOTEL_CALLER_ID'),
+                //                 'CallType' => 'trans',
+                //                 'TimeLimit' => '1200'
+                //             ])
                 //             ->post();
-                if(!isset($responseXML->Call)){
-                    return response()->json(['Message' => $responseXML->RestException->Message, 'Status' => '422']);
-                }
-                $callHistory->exotel_sid = $responseXML->Call->Sid;
-            }
+                            
+                // $responseXML = json_decode(json_encode(simplexml_load_string($response)));
+
+                // if(!isset($responseXML->Call)){
+                //     return response()->json(['Message' => $responseXML->RestException->Message, 'Status' => '422']);
+                // }
+                // $callHistory->exotel_sid = $responseXML->Call->Sid;
+
+                // EXOTEL CODE END
+
+
+            // }
             
             //count repeat call
             $callCount = CallHistory::where('phone', $phone)->where('country_code', $lead->country_code)->count();
@@ -637,7 +704,59 @@ class LeadController extends Controller
 
             $lastActivity = $callHistory->created_at->format('Y-m-d H:i:s');
             //Update lead
-            
+
+            $getHistoryRecord = DB::table('call_history_data')->where('lead_id',$callHistory->lead_id)->count();
+            if($getHistoryRecord > 0)
+            {
+                DB::table('call_history_data')
+                ->where('lead_id', $callHistory->lead_id)  // find your user by their email
+                ->update(array(
+                    'country_code' => $callHistory->country_code,
+                    'phone' => $callHistory->phone,
+                    'called_by' => $callHistory->called_by,
+                    'duration' => $callHistory->duration,
+                    'call_type' => $callHistory->call_type,
+                    'call_record_file' => $callHistory->call_record_file,
+                    'note' => $callHistory->note,
+                    'lead_status' => $callHistory->lead_status,
+                    'schedule_address' => $callHistory->schedule_address,
+                    'schedule_time' => $callHistory->schedule_time,
+                    'next_follow_up' => $callHistory->next_follow_up,
+                    'type' => $callHistory->type,
+                    'saved' => $callHistory->saved,
+                    'created_at' => $callHistory->created_at,
+                    'updated_at' => $callHistory->updated_at,
+                    'exotel_sid' => $callHistory->exotel_sid,
+                    'exotel_call_status' => $callHistory->exotel_call_status,
+                    'data_medium' => $callHistory->data_medium,
+                ));  
+            }
+            else
+            {
+                $values = array(
+                                'lead_id' => $callHistory->lead_id,
+                                'country_code' => $callHistory->country_code,
+                                'phone' => $callHistory->phone,
+                                'called_by' => $callHistory->called_by,
+                                'duration' => $callHistory->duration,
+                                'call_type' => $callHistory->call_type,
+                                'call_record_file' => $callHistory->call_record_file,
+                                'note' => $callHistory->note,
+                                'lead_status' => $callHistory->lead_status,
+                                'schedule_address' => $callHistory->schedule_address,
+                                'schedule_time' => $callHistory->schedule_time,
+                                'next_follow_up' => $callHistory->next_follow_up,
+                                'type' => $callHistory->type,
+                                'saved' => $callHistory->saved,
+                                'created_at' => $callHistory->created_at,
+                                'updated_at' => $callHistory->updated_at,
+                                'exotel_sid' => $callHistory->exotel_sid,
+                                'exotel_call_status' => $callHistory->exotel_call_status,
+                                'data_medium' => $callHistory->data_medium,
+                            );
+                DB::table('call_history_data')->insert($values);
+            }
+
             $lead->lead_status = $request['leadStatus'];
             $lead->lead_status_at = $callHistory->updated_at;
             $lead->reason_id = ($request['leadDeadReason'] != '')? $request['leadDeadReason'] : '0';
@@ -694,7 +813,9 @@ class LeadController extends Controller
             if($source == 'api') {
                 return response()->json(['Message' => 'Success', 'Status' => '200', 'Data' => array()]);    
             }
-            return response()->json(['Message' => 'Success', 'Status' => '200', 'Data' => history()->renderEntity('Lead', $lead->id, null, false)]);
+           
+                       return response()->json(['Message' => 'Success', 'Status' => '200', 'Data' => history()->renderEntity('Lead', $lead->id, null, false)]);
+            
         }
     }
 
@@ -744,6 +865,7 @@ class LeadController extends Controller
 
     function getLeadDetail(Lead $lead, Request $request)
     {
+
         $data = array(
             'lead_status' => strtoupper($lead->lead_status),
             'status_class' => $lead->status_class,
@@ -845,5 +967,32 @@ class LeadController extends Controller
         $sources = $leadRepo->getMediumFilter();
 
         return view('backend.lead.assigned', compact('cities', 'sources', 'executives'));
+    }
+
+    public function getIncomingDetail()
+    {
+        $incomingDetails = DB::table('office24responseincoming')
+        ->join('leads', 'leads.phone', '=', 'office24responseincoming.callerNumber')
+        ->join('users', 'users.id', '=', 'leads.assigned_to')
+        ->select('office24responseincoming.call_type','office24responseincoming.user','office24responseincoming.call_time','office24responseincoming.callerNumber','office24responseincoming.call_type', 'leads.assigned_to','leads.name as lead_name','leads.id as lead_id', 'users.name', 'users.email')
+        ->where('leads.assigned_to',Auth::id())
+       ->first();
+       if($incomingDetails)
+       {
+           $html = '<tr style="cursor:pointer">';
+           $html .= '<td><a onclick="incoming()"><span id="lead-dataval" data-val="'.$incomingDetails->lead_id.'" data-name="'.$incomingDetails->lead_name.'">'.$incomingDetails->lead_id.'</span></a></td>';
+           $html .= '<td><a onclick="incoming()">'.$incomingDetails->lead_name.'</a></td>';
+           $html .= '<td><a onclick="incoming()">'.$incomingDetails->callerNumber.'</a></td>';
+           $html .= '<td><a onclick="incoming()">'.$incomingDetails->call_time.'</a></td>';
+           $html .= '<td><a onclick="incoming()">'.$incomingDetails->name.'</a></td>';
+           $html .= '</tr>';
+       }
+       else
+       {    
+           $html = '<tr>';
+           $html .= '<td colspan="4"><h4 class="text-center">No Record Found</h4></td>';
+           $html .= '</tr>';
+       }
+      return $html;
     }
 }

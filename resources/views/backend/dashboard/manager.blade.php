@@ -9,232 +9,82 @@
         {{ app_name() }}
         <small>{{ trans('strings.backend.dashboard.title') }}</small>
     </h1>
-    <div class="pull-right">
-        <div id="reportrange" style="background: #fff; cursor: pointer; padding: 5px 10px; border: 1px solid #ccc; width: 100%;margin-top:-25px;">
-            <i class="fa fa-calendar"></i>&nbsp;
-            <span>
-                {{ date('F d, Y', strtotime($startDate)).' - '.date('F d, Y', strtotime($endDate)) }}
-            </span> <i class="fa fa-caret-down"></i>
-        </div>
-    </div>
+    
 @endsection
-
+<style type="text/css">
+        
+#overlay{   
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 100;
+      width: 100%;
+      height:100%;
+      display: none;
+      background: rgba(0,0,0,0.6);
+    }
+.cv-spinner {
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;  
+    }
+.spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px #ddd solid;
+      border-top: 4px #2e93e6 solid;
+      border-radius: 50%;
+      animation: sp-anime 0.8s infinite linear;
+    }
+@keyframes sp-anime {
+      100% { 
+        transform: rotate(360deg); 
+      }
+    }
+    .is-hide{
+      display:none;
+    }
+.title-text
+{
+    text-align: center;
+    margin-top: 100px;
+}
+</style>
 @section('content')
-
+    <div id="overlay">
+      <div class="cv-spinner">
+        <span class="spinner"></span>
+      </div>
+    </div>
+       
     <div class="callout callout-info">
         <h4>Welcome, {{  $logged_in_user->name }}</h4>
         {{-- <p>Tip of the day to get more sales. Pitch on well.</p> --}}
     </div>
-
-    <div class="row">
-        <div class="col-lg-6 col-xs-6">
-            <!-- small box -->
-            <div class="small-box bg-yellow">
-            <div class="inner">
-                <h3>{{ $data['totalWorkforce'] }}</h3>
-                <p>Workforce</p>
+    <div class="row ">
+        <div class="box-tools pull-right">
+               <form action="{{ route('admin.getCalculation') }}" method="post">
+                <div id="reportrange" style="background: #fff; cursor: pointer; padding: 5px 5px; border: 1px solid #ccc; width: 310px;position: absolute;right: 140px;">
+                    <i class="fa fa-calendar"></i>&nbsp;
+                    <span>
+                        {{ date('F d, Y', strtotime($startDate)).' - '.date('F d, Y', strtotime($endDate)) }}
+                    </span> <i class="fa fa-caret-down"></i>
+                </div>
+                <input type="hidden" name="endDate" id="endDate" value="">
+                <input type="hidden" name="startDate" id="startDate" value="">
+                <div class="pull-right mb-10">
+                    
+                    <input name="_token" type="hidden" value="{{ csrf_token() }}"/>
+                    <a onclick="getCalculations();" class="btn btn-success" style="margin-right: 30px;"> Calculate</a>
+                    <button type="submit" id="calculationButton" class="btn btn-success" style="margin-right: 30px; display: none;"></button>
+                </div>
+                </form>
+                <div class="clearfix"></div>
             </div>
-            <div class="icon">
-                <i class="fa fa-users"></i>
-            </div>
-            </div>
-        </div>
-        <!-- ./col -->
-        <div class="col-lg-6 col-xs-6">
-            <!-- small box -->
-            <div class="small-box bg-green">
-            <div class="inner">
-                <h3>{{ $data['totalCallTime'] }}</h3>
-                <p>Total Call Time</p>
-            </div>
-            <div class="icon">
-                <i class="fa fa-tty"></i>
-            </div>
-            </div>
-        </div>
-        <!-- ./col -->
     </div>
-
-    <h5>Call Stats</h5>
-    <div class="row dashboard">
-        <div class="col-lg-6 col-xs-6">
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="info-box">
-                        <span class="info-box-icon bg-blue"><i class="fa fa-phone"></i></span>
-                        <div class="info-box-content">
-                            <span class="info-box-number">{{ $data['totalCall'] }} | {{ $data['totalUniqueCall'] }} <small>Unique</small></span>
-                            <span class="info-box-text">Total Calls</span>
-                        </div>
-                        <!-- /.info-box-content -->
-                    </div>
-                    <div class="info-box">
-                        <span class="info-box-icon bg-green"><i class="fa fa-phone"></i></span>
-                        <div class="info-box-content">
-                            <span class="info-box-number">{{ $data['totalTrainingCall'] }}</span>
-                            <span class="info-box-text">Training Calls</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="info-box">
-                        <span class="info-box-icon bg-red"><i class="fa fa-phone"></i></span>
-                        <div class="info-box-content">
-                            <span class="info-box-number">{{ $data['noAudioCalls'] }}</span>
-                            <span class="info-box-text">Audio Missing Calls</span>
-                        </div>
-                        <!-- /.info-box-content -->
-                    </div>
-                    <div class="info-box">
-                        <span class="info-box-icon bg-yellow"><i class="fa fa-phone"></i></span>
-                        <div class="info-box-content">
-                            <span class="info-box-number">{{ $data['totalSaleCall'] }}</span>
-                            <span class="info-box-text">Sales Calls</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-        <!-- ./col -->
-
-        <div class="col-lg-6 col-xs-6">
-            <div class="box">
-                <div class="box-body no-padding">
-                    <table class="table table-striped">
-                        <tbody><tr>
-                            <th>Executive</th>
-                            <th>Sale</th>
-                            <th>Hot</th>
-                            <th>Mild</th>
-                            <th>Cold</th>
-                            <th>No Answer</th>
-                            <th>Busy</th>
-                            <th>Not Interested</th>
-                            <th>Dead</th>
-                        </tr>
-                        @foreach($tableData as $key=>$row)
-                        <tr>
-                            <td><a href="/admin/workforce/executive/{{ $row['id'] }}">{{ $row['name'] }}</a></td>
-                            <td>{{ $row['sale'] }}</td>
-                            <td>{{ $row['hot'] }}</td>
-                            <td>{{ $row['mild'] }}</td>
-                            <td>{{ $row['cold'] }}</td>
-                            <td>{{ $row['no_answer'] }}</td>
-                            <td>{{ $row['busy'] }}</td>
-                            <td>{{ $row['not_interested'] }}</td>
-                            <td>{{ $row['dead'] }}</td>
-                        </tr>
-                        @endforeach
-                        </tbody>
-                    </table>
-                </div>
-                 <!-- /.box-body -->
-            </div>
-        </div>
-        <!-- ./col -->
-    </div>
-
-    <h5>Sales Stats</h5>
-    <div class="row dashboard">
-        <div class="col-lg-2 col-xs-2">
-            <a href="{{ route('admin.lead.call_history', ['status' => 'sale']) }}">
-            <div class="info-box">
-                <span class="info-box-icon bg-green"><i class="fa fa-phone"></i></span>
-                <div class="info-box-content">
-                    <span class="info-box-number">{{ $data['totalSaleLeads'] }}</span>
-                    <span class="info-box-text">Sale</span>
-                </div>
-                <!-- /.info-box-content -->
-            </div>
-            </a>
-        </div>
-        <div class="col-lg-2 col-xs-2">
-            <a href="{{ route('admin.lead.call_history', ['status' => 'hot']) }}">
-            <div class="info-box">
-                <span class="info-box-icon" style="background-color:#3c8dbc;color:#fff;"><i class="fa fa-phone"></i></span>
-                <div class="info-box-content">
-                    <span class="info-box-number">{{ $data['totalHotLeads'] }}</span>
-                    <span class="info-box-text">Hot</span>
-                </div>
-                <!-- /.info-box-content -->
-            </div>
-            </a>
-        </div>
-        <div class="col-lg-2 col-xs-2">
-            <a href="{{ route('admin.lead.call_history', ['status' => 'mild']) }}">
-            <div class="info-box">
-                <span class="info-box-icon bg-blue"><i class="fa fa-phone"></i></span>
-                <div class="info-box-content">
-                    <span class="info-box-number">{{ $data['totalMildLeads'] }}</span>
-                    <span class="info-box-text">Mild</span>
-                </div>
-                <!-- /.info-box-content -->
-            </div>
-            </a>
-        </div>
-        <div class="col-lg-2 col-xs-2">
-            <a href="{{ route('admin.lead.call_history', ['status' => 'cold']) }}">
-            <div class="info-box">
-                <span class="info-box-icon bg-yellow"><i class="fa fa-phone"></i></span>
-                <div class="info-box-content">
-                    <span class="info-box-number">{{ $data['totalColdLeads'] }}</span>
-                    <span class="info-box-text">Cold</span>
-                </div>
-                <!-- /.info-box-content -->
-            </div>
-            </a>
-        </div>
-    </div>
-    <div class="row dashboard">
-        <div class="col-lg-2 col-xs-2">
-            <a href="{{ route('admin.lead.call_history', ['status' => 'no_answer']) }}">
-            <div class="info-box">
-                <span class="info-box-icon bg-green"><i class="fa fa-phone"></i></span>
-                <div class="info-box-content">
-                    <span class="info-box-number">{{ $data['totalNoAnswerLeads'] }}</span>
-                    <span class="info-box-text">No Answer</span>
-                </div>
-                <!-- /.info-box-content -->
-            </div>
-            </a>
-        </div>
-        <div class="col-lg-2 col-xs-2">
-            <a href="{{ route('admin.lead.call_history', ['status' => 'busy']) }}">
-            <div class="info-box">
-                <span class="info-box-icon" style="background-color:#3c8dbc;color:#fff;"><i class="fa fa-phone"></i></span>
-                <div class="info-box-content">
-                    <span class="info-box-number">{{ $data['totalBusyLeads'] }}</span>
-                    <span class="info-box-text">Busy</span>
-                </div>
-                <!-- /.info-box-content -->
-            </div>
-            </a>
-        </div>
-        <div class="col-lg-2 col-xs-2">
-            <a href="{{ route('admin.lead.call_history', ['status' => 'not_interested']) }}">
-            <div class="info-box">
-                <span class="info-box-icon bg-blue"><i class="fa fa-phone"></i></span>
-                <div class="info-box-content">
-                    <span class="info-box-number">{{ $data['totalNotInterestedLeads'] }}</span>
-                    <span class="info-box-text">Not Interested</span>
-                </div>
-                <!-- /.info-box-content -->
-            </div>
-            </a>
-        </div>
-        <div class="col-lg-2 col-xs-2">
-            <a href="{{ route('admin.lead.call_history', ['status' => 'dead']) }}">
-            <div class="info-box">
-                <span class="info-box-icon bg-red"><i class="fa fa-phone"></i></span>
-                <div class="info-box-content">
-                    <span class="info-box-number">{{ $data['totalDeadLeads'] }}</span>
-                    <span class="info-box-text">Dead</span>
-                </div>
-                <!-- /.info-box-content -->
-            </div>
-            </a>
-        </div>
+    <div class="row ">
+        <h3 class="title-text">Please click on calculate button to get CRM data.</h3>
     </div>
 
 @endsection
@@ -243,6 +93,12 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <script>
+    function getCalculations()
+    {
+        $("#overlay").fadeIn(300);　
+        $('#calculationButton').click();
+    }
+
     $(function() {
         var startDate = '{{ $startDate }}';
         var endDate = '{{ $endDate }}';
@@ -271,9 +127,16 @@
         $('#reportrange').on('apply.daterangepicker', function(ev, picker) {
             startDate = picker.startDate.format('YYYY-MM-DD');
             endDate = picker.endDate.format('YYYY-MM-DD');
-            window.location.href = baseURL + '/admin/dashboard?startDate='+startDate+'&endDate='+endDate;
+            $('#startDate').val(startDate);
+            $('#endDate').val(endDate);
+            // window.location.href = baseURL + '/admin/dashboard?startDate='+startDate+'&endDate='+endDate+'&cal=1';
         });
        
     });
+    </script>
+    <script>
+        if ( window.history.replaceState ) {
+            window.history.replaceState( null, null, window.location.href );
+        }
     </script>
 @endsection

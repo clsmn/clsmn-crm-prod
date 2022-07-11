@@ -73,7 +73,8 @@ class Handler extends ExceptionHandler
         //             ->asJson()
         //             ->post();
 
-        $response = Curl::to('https://hooks.slack.com/services/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')
+        // $response = Curl::to('https://hooks.slack.com/services/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')
+        $response = Curl::to('https://chat.googleapis.com/v1/spaces/AAAACSCs7Gs/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=8zYMQyTK5aHtYJyxrIETCmnYTBu4k-QeJOOGUWZHWpI%3D')
                     ->withData( array( 'text' => $msg ) )
                     ->asJson()
                     ->post();

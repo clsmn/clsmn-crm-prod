@@ -36,7 +36,10 @@ Route::group(['namespace' => 'Backend', 'prefix' => 'admin', 'as' => 'admin.', '
 });
 
 
-Route::get('test', 'TestController@index');
+// Route::get('test', 'TestController@index');
+Route::get('test', 'TestController@callHistoryClone');
 // Route::get('test/update', 'TestController@phaseUpdate');
 // Route::get('test/databank/update', 'TestController@dataBankUpdate');
-Route::get('test1', 'TestController@test1');
+// Route::get('test1', 'TestController@test1');
+// Route::get('no_answer/export', 'TestController@noAnswerExport');
+Route::post('webhook/lead', 'Backend\Facebook\FacebookLeadsController@webhookLead');
