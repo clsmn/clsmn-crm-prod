@@ -19,3 +19,5 @@ Todo.rtf
 .vagrant
 crm.sql
 crm_latest.sql
+.env
+
